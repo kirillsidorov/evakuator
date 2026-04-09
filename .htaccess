@@ -1,0 +1,84 @@
+RewriteEngine On
+RewriteBase /
+
+# --- РОКИРОВКА (должна быть ПЕРВОЙ) ---
+RewriteRule ^ua/uslugi-manipulyatora-kharkov/?$ /ua/manipulator-kharkov [R=301,L]
+RewriteRule ^uslugi-manipulyatora-kharkov/?$ /manipulator-kharkov [R=301,L]
+
+RewriteRule ^ua/Arenda-Krana-Manipulyatora(\.php|\.html)?$ /ua/manipulator-kharkov [R=301,L]
+RewriteRule ^Arenda-Krana-Manipulyatora(\.php|\.html)?$ /manipulator-kharkov [R=301,L]
+
+RewriteRule ^ua/vykup-bityh-avtomobilej-v-harkove(\.php|\.html)?$ /ua/avtovykup-kharkov [R=301,L]
+RewriteRule ^vykup-bityh-avtomobilej-v-harkove(\.php|\.html)?$ /avtovykup-kharkov [R=301,L]
+
+
+# --- БЛОК 1: Убираем index и index.php ---
+RewriteCond %{THE_REQUEST} /index(\.php)? [NC]
+RewriteRule ^(.*)index(\\.php)?$ /$1 [R=301,L]
+
+
+# --- БЛОК 3: SEO И БЕЗОПАСНОСТЬ ---
+
+# 1. Склейка зеркал: удаляем WWW
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# 2. Принудительный HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+# 3. Убираем слэш в конце адреса
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)/$ /$1 [L,R=301]
+
+# 4. Удаление .html
+RewriteCond %{THE_REQUEST} " /([^ ]+)\.html"
+RewriteRule ^ /%1 [L,R=301]
+
+# 5. Удаление .php
+RewriteCond %{THE_REQUEST} " /([^ ]+)\.php"
+RewriteRule ^ /%1 [L,R=301]
+
+
+# --- БЛОК 4: ПОДКЛЮЧЕНИЕ ФАЙЛОВ (Физических) ---
+
+# 6. Сначала ищем реальный PHP файл
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# 7. Если PHP нет, ищем реальный HTML файл
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+
+# --- БЛОК 4.5: CMS РОУТИНГ (Если файлы НЕ найдены) ---
+
+# Если файла нет — отправляем в роутер
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Правило для UA (запросы вида /ua/slug)
+# Мы передаем slug без префикса ua/ прямо в router.php
+RewriteRule ^ua/([^/]+)$ router.php?slug=$1&lang=ua [L,QSA]
+
+# Правило для RU (запросы в корне)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([^/]+)$ router.php?slug=$1&lang=ru [L,QSA]
+
+
+# --- БЛОК 5: ЗАЩИТА И ПРИВАТНОСТЬ ---
+
+# 1. Запрещаем доступ к базе и конфигам
+<FilesMatch "^(data\.json|my_site_database\.db|db_connect\.php|config\.php)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# 2. Запрещаем индексацию админки
+<FilesMatch "^(admin\.php|sitemap_gen\.php)$">
+    Header set X-Robots-Tag "noindex, nofollow"
+</FilesMatch>
+

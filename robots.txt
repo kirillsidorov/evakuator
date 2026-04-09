@@ -1,0 +1,12 @@
+User-agent: *
+Sitemap: https://evakuator-kharkov.kh.ua/sitemap.xml
+Host: https://evakuator-kharkov.kh.ua
+
+
+
+
+
+
+
+
+
