@@ -4,9 +4,9 @@ $is_full_address = in_array($page_type, $show_address_types);
 ?>
 <section class="sec">
     <div class="sec-inner">
-        <div class="sec-title">
+        <h2 class="sec-title">
             <?= ($lang == 'ua' ? "Телефон евакуатора " : "Телефон эвакуатора ") . ($loc['in_city'] ?? '') ?>
-        </div>
+        </h2>
         
         <div class="contacts-list">
             <div class="contact-row">

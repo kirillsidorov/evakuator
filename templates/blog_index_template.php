@@ -1,94 +1,71 @@
 <?php
-// templates/blog_index_template.php
-// ШАБЛОН СТРАНИЦЫ БЛОГА (АРХИВ НОВОСТЕЙ)
+/**
+ * ШАБЛОН: Индекс блога (список статей)
+ * blog-grid с карточками
+ */
 
+// 1. Header
 require_smart('header.php', $lang, $ua_includes, $root_includes);
+
+// 2. Хлебные крошки
 require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
 
-// 1. Получаем список статей из базы
-// Берем только тип 'articles' и текущий язык, сортируем от новых к старым
+// 3. Получаем статьи
 $articles = $db->select('pages', '*', [
-    'type' => 'articles',
-    'lang' => $lang,
+    'type'  => 'articles',
+    'lang'  => $lang,
     'ORDER' => ['id' => 'DESC']
 ]);
 
-// Тексты для кнопки и пустого состояния
-$btn_text = ($lang == 'ua') ? 'Детальніше' : 'Подробнее';
+$btn_text   = ($lang == 'ua') ? 'Детальніше' : 'Подробнее';
 $empty_text = ($lang == 'ua') ? 'Статей поки немає.' : 'Статей пока нет.';
-
+$prefix     = ($lang == 'ua') ? '/ua/' : '/';
 ?>
 
-<section class="mbr-section content4 cid-sDSrw8qCmX" id="ij">
-    <div class="container">
-        <div class="media-container-row">
-            <div class="title col-12 col-md-8">
-                <h1 class="align-center pb-3 mbr-fonts-style display-2">
-                    <?= $custom_h1 ?>
-                </h1>
-                
-                <?php if (!empty($custom_p)): ?>
-                    <p class="mbr-text align-center pb-3 mbr-fonts-style display-5">
-                        <?= $custom_p ?>
-                    </p>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-</section>
+<section class="sec">
+    <div class="sec-inner">
+        <h1 class="sec-title"><?= $custom_h1 ?></h1>
+        <?php if (!empty($custom_p)): ?>
+            <div class="text-block" style="margin-bottom:32px;"><?= $custom_p ?></div>
+        <?php endif; ?>
 
-<section class="features3 cid-sDH4ywWIgz" id="features3-ft">
-    <div class="container">
-        <div class="row">
-            <?php if (!empty($articles)): ?>
-                <?php foreach ($articles as $item): 
-                    // Формируем ссылку: если язык UA, добавляем префикс /ua/
-                    $link_prefix = ($lang == 'ua') ? '/ua/' : '/';
-                    // Если slug уже содержит слэш в начале, убираем дублирование (на всякий случай)
-                    $slug_clean = ltrim($item['slug'], '/');
-                    $article_link = $link_prefix . $slug_clean;
-                ?>
-                <div class="card p-3 col-12 col-md-6 col-lg-4">
-                    <div class="card-wrapper">
-                        <div class="card-img">
-                            <img src="<?= $item['hero_image'] ?>" alt="<?= $item['breadcrumb_title'] ?>">
-                        </div>
-                        <div class="card-box">
-                            <h4 class="card-title mbr-fonts-style display-7">
-                                <?= $item['breadcrumb_title'] ?>
-                            </h4>
-                            <p class="mbr-text mbr-fonts-style display-7">
-                                <?= $item['meta_description'] ?>
-                            </p>
-                        </div>
-                        <div class="mbr-section-btn text-center">
-                            <a href="<?= $article_link ?>" class="btn btn-primary display-4">
-                                <?= $btn_text ?>
-                            </a>
-                        </div>
-                    </div>
+        <?php if (!empty($articles)): ?>
+        <div class="blog-grid">
+            <?php foreach ($articles as $item):
+                $link = $prefix . ltrim($item['slug'], '/');
+            ?>
+            <a href="<?= $link ?>" class="blog-card">
+                <?php if (!empty($item['hero_image'])): ?>
+                    <img src="<?= htmlspecialchars($item['hero_image']) ?>"
+                         alt="<?= htmlspecialchars($item['breadcrumb_title']) ?>"
+                         loading="lazy">
+                <?php endif; ?>
+                <div class="blog-body">
+                    <div class="blog-title"><?= htmlspecialchars($item['breadcrumb_title']) ?></div>
+                    <div class="blog-desc"><?= htmlspecialchars(mb_substr($item['meta_description'] ?? '', 0, 140)) ?></div>
+                    <span class="blog-btn"><?= $btn_text ?></span>
                 </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="col-12">
-                    <p class="text-center"><?= $empty_text ?></p>
-                </div>
-            <?php endif; ?>
+            </a>
+            <?php endforeach; ?>
         </div>
+        <?php else: ?>
+            <p style="text-align:center;color:#888;"><?= $empty_text ?></p>
+        <?php endif; ?>
     </div>
 </section>
 
 <?php
-// Если вдруг для страницы Блога мы добавим SEO-текст в админке, выведем его внизу
+// SEO-текст если есть
 if (!empty($blocks)) {
     foreach ($blocks as $block) {
         if ($block['block_type'] == 'text') {
-             echo "<div class='container'><div class='row'><div class='col-12'>";
-             echo $block['content'];
-             echo "</div></div></div>";
+            echo '<section class="sec"><div class="sec-inner"><div class="text-block">';
+            echo $block['content'];
+            echo '</div></div></section>';
         }
     }
 }
 
+// Footer
 require_smart('footer.php', $lang, $ua_includes, $root_includes);
 ?>

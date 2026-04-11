@@ -1,79 +1,83 @@
 <?php
-// location_template.php
+/**
+ * ШАБЛОН: Локации + Услуги (unified)
+ * Работает для type: locations, district, services
+ * Новый дизайн — все компоненты из /components/
+ */
 
-global $settings; // Доступ к настройкам для замены {tel1}
+global $settings;
 
+// === ПОДСТАНОВКА ПЛЕЙСХОЛДЕРОВ ===
 if (!empty($page)) {
-    // Передаем $settings последним аргументом
-    if (!empty($page['meta_title'])) 
+    if (!empty($page['meta_title']))
         $title = apply_placeholders($page['meta_title'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
-        
-    if (!empty($page['meta_description'])) 
+    if (!empty($page['meta_description']))
         $description = apply_placeholders($page['meta_description'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
-    
-    // H1 и Hero
+
+    // H1
     if (!empty($custom_h1)) {
         $custom_h1 = apply_placeholders($custom_h1, $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
     } elseif (!empty($page['h1'])) {
         $custom_h1 = apply_placeholders($page['h1'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
     }
-    // Hero P
-    if (!empty($custom_p)) $raw_p = $custom_p;
-    elseif (!empty($page['custom_p'])) $raw_p = $page['custom_p'];
-    else $raw_p = '';
 
+    // Hero P
+    $raw_p = !empty($custom_p) ? $custom_p : (!empty($page['custom_p']) ? $page['custom_p'] : '');
     if (!empty($raw_p)) {
         if ($time_val) {
-             $raw_p = str_replace(['в течение 20-40 минут', 'протягом 20-40 хвилин'], ($lang == 'ua' ? "протягом {$time_val}" : "в течение {$time_val}"), $raw_p);
+            $raw_p = str_replace(
+                ['в течение 20-40 минут', 'протягом 20-40 хвилин'],
+                ($lang == 'ua' ? "протягом {$time_val}" : "в течение {$time_val}"),
+                $raw_p
+            );
         }
-        $custom_p = apply_placeholders($raw_p, $city_val, $in_city_val, $price_val, $dist_val, $time_val);
+        $custom_p = apply_placeholders($raw_p, $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
     }
-    
+
     if (empty($custom_bg) && !empty($page['hero_image'])) $custom_bg = $page['hero_image'];
     if (empty($custom_btn) && !empty($page['custom_btn'])) $custom_btn = $page['custom_btn'];
 }
 
-// ==========================================
-// 3. СБОРКА СТРАНИЦЫ
-// ==========================================
+// === СБОРКА СТРАНИЦЫ ===
 
+// 1. Header
 require_smart('header.php', $lang, $ua_includes, $root_includes);
 
+// 2. Хлебные крошки (не на главной)
 if ($slug !== 'home' && $slug !== '') {
-    if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/breadcrumbs.php')) {
-        include $_SERVER['DOCUMENT_ROOT'] . '/breadcrumbs.php';
-    } else {
-        require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
-    }
+    require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
 }
 
-$hero_type = $page['h1_type'] ?? 'standard';
-$hero_file = ($hero_type === 'service') ? 'h1_service.php' : (($hero_type === 'simple') ? 'h1_simple.php' : 'h1_block.php');
-require_smart($hero_file, $lang, $ua_includes, $root_includes);
-
-// ВЫВОД БЛОКОВ
+// 3. Hero блок
+require_smart('h1_block.php', $lang, $ua_includes, $root_includes);
+/*
+// 4. SEO-блок маршрута (для межгорода — показывает расстояние, время, цену)
+if (!empty($dist_val) && !empty($time_val)) {
+    require_smart('route_seo_block.php', $lang, $ua_includes, $root_includes);
+}
+*/
+// 5. Контентные блоки из БД
 if (!empty($blocks)) {
     foreach ($blocks as $block) {
-        
         if ($block['block_type'] == 'include') {
+            // Карта — передаём данные
             if ($block['block_path'] == 'maps.php' && !empty($attrs['maps'])) {
-                 $loc_map = $attrs['maps'];
+                $loc_map = $attrs['maps'];
             }
             require_smart($block['block_path'], $lang, $ua_includes, $root_includes);
         }
-        
         elseif ($block['block_type'] == 'text') {
-             echo "<div class='container'><div class='row'><div class='col-12'>";
-             echo $block['content'];
-             echo "</div></div></div>";
+            echo '<section class="sec"><div class="sec-inner"><div class="text-block">';
+            echo apply_placeholders($block['content'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
+            echo '</div></div></section>';
         }
-        
         elseif ($block['block_type'] == 'structured_content') {
-             $items_array = json_decode($block['content'], true);
-             render_structured_content($items_array);
+            $items = json_decode($block['content'], true);
+            if ($items) render_structured_content($items);
         }
     }
 }
 
+// 6. Footer
 require_smart('footer.php', $lang, $ua_includes, $root_includes);
 ?>

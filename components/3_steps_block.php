@@ -1,14 +1,14 @@
 <section class="sec">
     <div class="sec-inner">
-        <div class="sec-title align-center" style="text-align: center;">
+        <h2 class="sec-title" style="text-align: center;">
             <?= ($lang == 'ua') ? "Всього 3 кроки для замовлення евакуатора " . ($loc['in_city'] ?? '') : "Всего 3 шага для заказа эвакуатора " . ($loc['in_city'] ?? '') ?>
-        </div>
+        </h2>
         
         <div class="steps">
             <div class="step">
                 <div class="step-num">1</div>
                 <div>
-                    <div class="step-title"><?= ($lang == 'ua') ? "Зателефонуйте нам" : "Позвоните нам" ?></div>
+                    <h3 class="step-title"><?= ($lang == 'ua') ? "Зателефонуйте нам" : "Позвоните нам" ?></h3>
                     <p class="step-text">
                         <strong><?= $settings['tel_one_view'] ?><br><?= $settings['tel_two_view'] ?></strong><br>
                         <?= ($lang == 'ua') ? "або залиште заявку на зворотний дзвінок." : "или оставьте заявку на обратный звонок." ?>
@@ -19,7 +19,7 @@
             <div class="step">
                 <div class="step-num">2</div>
                 <div>
-                    <div class="step-title"><?= ($lang == 'ua') ? "Уточніть деталі" : "Уточните детали" ?></div>
+                    <h3 class="step-title"><?= ($lang == 'ua') ? "Уточніть деталі" : "Уточните детали" ?></h3>
                     <p class="step-text">
                         <?= ($lang == 'ua') ? "Повідомте диспетчеру ваше місцезнаходження та тип автомобіля." : "Сообщите диспетчеру ваше местоположение и тип автомобиля." ?>
                     </p>
@@ -29,7 +29,7 @@
             <div class="step">
                 <div class="step-num">3</div>
                 <div>
-                    <div class="step-title"><?= ($lang == 'ua') ? "Чекайте евакуатор" : "Ожидайте эвакуатор" ?></div>
+                    <h3 class="step-title"><?= ($lang == 'ua') ? "Чекайте евакуатор" : "Ожидайте эвакуатор" ?></h3>
                     <p class="step-text">
                         <?= ($lang == 'ua') ? "Ваше замовлення прийнято. <br>Середній час очікування — 25 хвилин!" : "Ваш заказ принят. <br>Среднее время ожидания — 25 минут!" ?>
                     </p>

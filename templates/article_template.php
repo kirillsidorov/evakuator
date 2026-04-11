@@ -1,85 +1,66 @@
 <?php
-// templates/article_template.php
-// ШАБЛОН ДЛЯ ОДИНОЧНОЙ СТАТЬИ
+/**
+ * ШАБЛОН: Статья блога
+ * Простой: H1 + картинка + текст + related
+ */
 
+// 1. Header
 require_smart('header.php', $lang, $ua_includes, $root_includes);
 
-// Хлебные крошки
-if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/breadcrumbs.php')) {
-    include $_SERVER['DOCUMENT_ROOT'] . '/breadcrumbs.php';
-} else {
-    require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
-}
+// 2. Хлебные крошки
+require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
 
-// 1. Заголовок (H1 Simple - без фона)
+// 3. Заголовок H1 (простой, без фона)
 require_smart('h1_article.php', $lang, $ua_includes, $root_includes);
-
-// 2. ГЛАВНАЯ КАРТИНКА (Новая секция)
-// Если в базе у страницы есть hero_image, выводим её отдельным блоком
-if (!empty($page['hero_image'])) {
-?>
-    <section class="cid-article-image" id="article-image-section" style="padding-bottom: 20px; background-color: #ffffff;">
-        <div class="container">
-            <div class="media-container-row">
-                <div class="col-12 col-md-10">
-                    <div class="image-wrapper" style="border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                        <img src="<?= $page['hero_image'] ?>"
-                            alt="<?= htmlspecialchars($page['h1']) ?>"
-                            title="<?= htmlspecialchars($page['h1']) ?>"
-                            style="width: 100%; height: auto; display: block;">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-<?php
-}
 ?>
 
-<section class="mbr-section article content1 cid-sfh9tj5sqS">
-    <div class="container">
-        <div class="media-container-row">
-            <div class="mbr-text col-12 mbr-fonts-style display-7 col-md-8">
+<?php // 4. Главная картинка статьи ?>
+<?php if (!empty($page['hero_image'])): ?>
+<section class="sec" style="padding-top:0;padding-bottom:0;">
+    <div class="sec-inner">
+        <img src="<?= htmlspecialchars($page['hero_image']) ?>"
+             alt="<?= htmlspecialchars($page['h1']) ?>"
+             style="border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);"
+             loading="lazy">
+    </div>
+</section>
+<?php endif; ?>
 
-                <?php
-                // Вывод блоков контента из базы
-                if (!empty($blocks)) {
-                    foreach ($blocks as $block) {
-                        if ($block['block_type'] == 'text') {
-                            echo $block['content'];
-                        } elseif ($block['block_type'] == 'structured_content') {
-                            $items_array = json_decode($block['content'], true);
-                            render_structured_content($items_array);
-                        } elseif ($block['block_type'] == 'include') {
-                            require_smart($block['block_path'], $lang, $ua_includes, $root_includes);
-                        }
+<?php // 5. Контент статьи ?>
+<section class="sec">
+    <div class="sec-inner">
+        <div class="text-block" style="max-width:780px;">
+            <?php
+            if (!empty($blocks)) {
+                foreach ($blocks as $block) {
+                    if ($block['block_type'] == 'text') {
+                        echo $block['content'];
+                    } elseif ($block['block_type'] == 'structured_content') {
+                        $items = json_decode($block['content'], true);
+                        if ($items) render_structured_content($items);
+                    } elseif ($block['block_type'] == 'include') {
+                        require_smart($block['block_path'], $lang, $ua_includes, $root_includes);
                     }
                 }
-                ?>
-
-            </div>
+            }
+            ?>
         </div>
     </div>
 </section>
 
-<?php
-if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/includes/related.php')) {
-    include $_SERVER['DOCUMENT_ROOT'] . '/includes/related.php';
-}
-?>
+<?php // 6. Блок "Читайте также" ?>
+<?php require_smart('related.php', $lang, $ua_includes, $root_includes); ?>
 
-<section class="cid-back-btn pb-5" style="background-color: #f9f9f9; padding-top: 30px;">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-4 text-center">
-                <a href="<?= ($lang == 'ua' ? '/ua/news' : '/news') ?>" class="btn btn-secondary display-4">
-                    <?= ($lang == 'ua' ? '← Повернутися до блогу' : '← Вернуться в блог') ?>
-                </a>
-            </div>
-        </div>
+<?php // 7. Кнопка "Назад в блог" ?>
+<section class="sec" style="padding-top:0;text-align:center;">
+    <div class="sec-inner">
+        <a href="<?= ($lang == 'ua' ? '/ua/news' : '/news') ?>" class="blog-btn" style="padding:14px 28px;font-size:15px;">
+            ← <?= ($lang == 'ua' ? 'Повернутися до блогу' : 'Вернуться в блог') ?>
+        </a>
     </div>
 </section>
 
 <?php
+// 8. Footer
 require_smart('footer.php', $lang, $ua_includes, $root_includes);
 ?>

@@ -1,8 +1,9 @@
 <?php
 // router.php
+// Обновлён: добавлена поддержка hub_template
 
 // 1. ПОДКЛЮЧАЕМ БАЗУ И КОНФИГ
-require_once 'db.php'; 
+require_once 'db.php';
 require_once 'config.php';
 require_once 'includes/theme_functions.php';
 
@@ -33,39 +34,33 @@ if (!$page) {
 }
 
 // 4. РАСПАКОВКА ПЕРЕМЕННЫХ И PRICE ENGINE
+$page_type     = $page['type'] ?? 'standard';
+$location_type = $page['location_type'] ?? 'city';
 
-// 4. РАСПАКОВКА ПЕРЕМЕННЫХ И PRICE ENGINE
-$page_type = $page['type'] ?? 'standard'; // Глобальный тип страницы
-$location_type = $page['location_type'] ?? 'city'; // Тип локации (город/район)
-
-$title = $page['meta_title'];
+$title       = $page['meta_title'];
 $description = $page['meta_description'];
 
-// Исправляем ключи согласно структуре БД
-$custom_h1 = $page['h1'] ?? ''; 
+$custom_h1 = $page['h1'] ?? '';
 $custom_p  = $page['custom_p'] ?? '';
 $custom_bg = $page['hero_image'] ?? '';
 
-$attrs = json_decode($page['attributes'], true) ?: [];
-$loc_map = $attrs['maps'] ?? ''; // Карту берем из атрибутов
+$attrs   = json_decode($page['attributes'], true) ?: [];
+$loc_map = $attrs['maps'] ?? '';
 
-// Определяем переменные для шаблонов (чтобы ушли Warning)
 $city_val    = $page['breadcrumb_title'] ?? (($lang == 'ua') ? 'Харків' : 'Харьков');
 $in_city_val = $attrs['in_city'] ?? (($lang == 'ua') ? 'у Харкові' : 'в Харькове');
 
-// --- ЛОГИКА РАСЧЕТА ЦЕН (PRICE ENGINE) ---
+// --- PRICE ENGINE ---
 $price_per_km = (int)($settings['price_km'] ?? 30);
 $base_min     = (int)($settings['price_feed'] ?? 1000);
+$final_price  = 0;
 
-$final_price = 0;
-
-// Используем колонку location_type из базы
 if ($location_type == 'district') {
     $final_price = !empty($attrs['price']) ? $attrs['price'] : ($settings['price_car'] ?? 1000);
 } else {
     if (!empty($attrs['distance'])) {
-        $distance = (float)$attrs['distance'];
-        $calculated = ($distance * $price_per_km * 2) + $base_min;
+        $distance    = (float)$attrs['distance'];
+        $calculated  = ($distance * $price_per_km * 2) + $base_min;
         $final_price = round($calculated, -2);
     } else {
         $final_price = !empty($attrs['price']) ? $attrs['price'] : ($settings['price_car'] ?? 1000);
@@ -76,43 +71,48 @@ $price_val = $final_price;
 $dist_val  = $attrs['distance'] ?? '';
 $time_val  = $attrs['time'] ?? '';
 
-// Формируем массив локации
 $loc = [
     'name'    => $city_val,
     'type'    => $location_type,
     'in_city' => $in_city_val
 ];
 
-// 5. ДОСТАЕМ КОНТЕНТНЫЕ БЛОКИ
+// 5. ДОСТАЁМ КОНТЕНТНЫЕ БЛОКИ
 $blocks = $db->select('content_blocks', '*', [
     'page_id' => $page['id'],
-    'ORDER' => ['sort_order' => 'ASC']
+    'ORDER'   => ['sort_order' => 'ASC']
 ]);
 
-// Передача данных для кнопок
-$custom_btn_text = $page['custom_btn'] ?? ''; 
-$custom_btn_link = "tel:" . ($settings['tel_one_link'] ?? ''); // БЕРЕМ ИЗ БАЗЫ
+// Кнопка
+$custom_btn_text = $page['custom_btn'] ?? '';
+$custom_btn_link = "tel:" . ($settings['tel_one_link'] ?? '');
 
-// 6. ПОДКЛЮЧАЕМ ПРАВИЛЬНЫЙ ШАБЛОН
+// 6. ПОДКЛЮЧАЕМ ШАБЛОН ПО ТИПУ СТРАНИЦЫ
+switch ($page['type']) {
+    case 'locations':
+    case 'district':
+        include 'templates/location_template.php';
+        break;
 
-if ($page['type'] == 'locations' || $page['type'] == 'district') {
-    // 1. Города и Районы
-    include 'templates/location_template.php';
+    case 'services':
+        include 'templates/service_template.php';
+        break;
 
-} elseif ($page['type'] == 'services') {
-    // 2. Услуги (Манипулятор, СТО) - Богатый шаблон
-    include 'templates/service_template.php';
+    case 'articles':
+        include 'templates/article_template.php';
+        break;
 
-} elseif ($page['type'] == 'articles') {
-    // 3. Статьи блога - Простой шаблон
-    include 'templates/article_template.php';
+    case 'archive':
+        include 'templates/blog_index_template.php';
+        break;
 
-} elseif ($page['type'] == 'archive') {
-    // 4. Главная страница Блога (список)
-    include 'templates/blog_index_template.php';
+    case 'hub':
+        include 'templates/hub_template.php';
+        break;
 
-} else {
-    // 5. Остальные...
-    include 'templates/location_template.php'; 
+    default:
+        // Fallback — локация
+        include 'templates/location_template.php';
+        break;
 }
 ?>

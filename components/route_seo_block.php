@@ -5,9 +5,9 @@ if ($dist_val && $time_val):
 ?>
     <section class="sec" style="background:#f8f8f6">
         <div class="sec-inner">
-            <div class="sec-title">
+            <h2 class="sec-title">
                 <?= ($lang == 'ua') ? "Маршрут евакуатора Харків — $city_val" : "Маршрут эвакуатора Харьков — $city_val" ?>
-            </div>
+            </h2>
             <div class="text-block">
                 <?php if ($lang == 'ua'): ?>
                     <p><strong>Скільки коштує та як довго чекати?</strong><br>
