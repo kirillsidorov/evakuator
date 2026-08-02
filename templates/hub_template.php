@@ -31,13 +31,13 @@ if (!empty($page)) {
 
 // === СБОРКА ===
 
-require_smart('header.php', $lang, $ua_includes, $root_includes);
+require_smart('header.php');
 
 if ($slug !== 'home' && $slug !== '') {
-    require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
+    require_smart('breadcrumbs.php');
 }
 
-require_smart('h1_block.php', $lang, $ua_includes, $root_includes);
+require_smart('h1_block.php');
 
 // === ДОЧЕРНИЕ СТРАНИЦЫ (таблица маршрутов) ===
 $children = $db->select('pages', '*', [
@@ -109,7 +109,7 @@ if (!empty($blocks)) {
             if ($block['block_path'] == 'maps.php' && !empty($attrs['maps'])) {
                 $loc_map = $attrs['maps'];
             }
-            require_smart($block['block_path'], $lang, $ua_includes, $root_includes);
+            require_smart($block['block_path']);
         } elseif ($block['block_type'] == 'text') {
             echo '<section class="sec"><div class="sec-inner"><div class="text-block">';
             echo apply_placeholders($block['content'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
@@ -121,5 +121,5 @@ if (!empty($blocks)) {
     }
 }
 
-require_smart('footer.php', $lang, $ua_includes, $root_includes);
+require_smart('footer.php');
 ?>

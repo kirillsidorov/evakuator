@@ -7,7 +7,7 @@ $footer_menu = $is_ua ? [
     'col1_title' => 'Райони Харкова', 'col1_links' => ['evakuator-saltovka' => 'Салтівка', 'evakuator-aleksseyevka' => 'Олексіївка', 'evakuator-kholodnaya-gora' => 'Холодна гора', 'evakuator-xtz' => 'ХТЗ', 'evakuator-novyye-doma' => 'Нові будинки'],
     'col2_title' => 'Область', 'col2_links' => ['evakuator-pesochin' => 'Пісочин', 'evakuator-merefa' => 'Мерефа', 'evakuator-Chuguyev' => 'Чугуїв', 'evakuator-balakleya' => 'Балаклія', 'evakuator-Izyum' => 'Ізюм', 'evakuator-Kupyansk' => 'Куп\'янськ', 'evakuator-Lozovaya' => 'Лозова', 'evakuator-po-kharkovskoy-oblasti'=> 'По області'],
     'col3_title' => 'Послуги', 'col3_links' => ['gruzovoy-evakuator-kharkov' => 'Вантажний евакуатор', 'evakuator-manipulator-kharkov' => 'Маніпулятор', 'Perevozka-spetstekhniki-Kharkov' => 'Перевезення спецтехніки', 'avtosos' => 'Автосос', 'sto-kharkov' => 'Послуги СТО', 'avtovykup-kharkov' => 'Автовикуп'],
-    'col4_title' => 'Клієнтам', 'col4_links' => ['price' => 'Тарифи та Ціни', 'phone-number' => 'Контакти', 'avtopark-evakuatorov' => 'Автопарк', 'news' => 'Блог'],
+    'col4_title' => 'Клієнтам', 'col4_links' => ['price' => 'Тарифи та Ціни', 'phone-number' => 'Контакти', 'avtopark-evakuatorov' => 'Автопарк', 'blog' => 'Блог'],
     'copyright' => '© Copyright 2010-' . date('Y') . ' Евакуатор по Харкову та Україні - Всі права захищені.',
     'google_aria' => 'Подивитися відгуки про Евакуатор Харків в Google',
     'instagram_aria' => 'Перейти в Instagram профіль Евакуатор Харків',
@@ -15,7 +15,7 @@ $footer_menu = $is_ua ? [
     'col1_title' => 'Районы Харькова', 'col1_links' => ['evakuator-saltovka' => 'Салтовка', 'evakuator-aleksseyevka' => 'Алексеевка', 'evakuator-kholodnaya-gora' => 'Холодная гора', 'evakuator-xtz' => 'ХТЗ', 'evakuator-novyye-doma' => 'Новые дома'],
     'col2_title' => 'Область', 'col2_links' => ['evakuator-pesochin' => 'Песочин', 'evakuator-merefa' => 'Мерефа', 'evakuator-Chuguyev' => 'Чугуев', 'evakuator-balakleya' => 'Балаклея', 'evakuator-Izyum' => 'Изюм', 'evakuator-Kupyansk' => 'Купянск', 'evakuator-Lozovaya' => 'Лозовая', 'evakuator-po-kharkovskoy-oblasti'=> 'По области'],
     'col3_title' => 'Услуги', 'col3_links' => ['gruzovoy-evakuator-kharkov' => 'Грузовой эвакуатор', 'evakuator-manipulator-kharkov' => 'Манипулятор', 'Perevozka-spetstekhniki-Kharkov' => 'Перевозка спецтехники', 'avtosos' => 'Автосос', 'sto-kharkov' => 'Услуги СТО', 'avtovykup-kharkov' => 'Автовыкуп'],
-    'col4_title' => 'Клиентам', 'col4_links' => ['price' => 'Тарифы и Цены', 'phone-number' => 'Контакты', 'avtopark-evakuatorov' => 'Автопарк', 'news' => 'Блог'],
+    'col4_title' => 'Клиентам', 'col4_links' => ['price' => 'Тарифы и Цены', 'phone-number' => 'Контакты', 'avtopark-evakuatorov' => 'Автопарк', 'blog' => 'Блог'],
     'copyright' => '© Copyright 2010-' . date('Y') . ' Эвакуатор по Харькову и Украине - Все права защищены.',
     'google_aria' => 'Посмотреть отзывы об Эвакуатор Харьков в Google',
     'instagram_aria' => 'Перейти в Instagram профиль Эвакуатор Харьков',
@@ -111,6 +111,37 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var gtmLoaded = false;
 
+    function loadGTM() {
+        if (gtmLoaded) return;
+        gtmLoaded = true;
+        
+        // Твой ID GTM
+        var gtmId = 'GTM-W8H32TN'; 
+
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer',gtmId);
+
+        // Удаляем слушатели после загрузки
+        ['scroll', 'mousemove', 'touchstart', 'click'].forEach(function(event) {
+            window.removeEventListener(event, loadGTM);
+        });
+    }
+
+    // Загружаем при первом взаимодействии
+    ['scroll', 'mousemove', 'touchstart', 'click'].forEach(function(event) {
+        window.addEventListener(event, loadGTM, {once: true, passive: true});
+    });
+
+    // Подстраховка: загрузить через 3 секунды, даже если не было действий
+    setTimeout(loadGTM, 3000);
+});
+</script>
 </body>
 </html>

@@ -1,0 +1,39 @@
+Перенесено в assets/images/_trash/:
+  -1-1101x1200.jpeg
+  -1025x592.jpeg
+  -1544x1214.jpeg
+  -1600x1200.jpeg
+  -512x512.png
+  -512x5120.png
+  -512x5121.png
+  -512x5124.png
+  -790x401.jpeg
+  1537275419-364414221-128x128.png
+  16908-2772315988122-676x461.jpg
+  16908-2772315988122-800x546.jpg
+  2-1000x5000.png
+  2-1000x5001.png
+  2-1000x5004.png
+  2-1000x5005.png
+  Arenda-Krana-Manipulyatora.jpg
+  Arenda-Krana-Manipulyatora_SM.jpg
+  Screenshot_1.jpg
+  bg2-1920x1278.jpg
+  g_1537275419-364414221-128x128.png
+  header-1800x1200.jpg
+  pngtreevector-tracking-icon-3767414-128x128.png
+  portrait-man-1.png
+  portrait-man-1.webp
+  portrait-man-2.png
+  portrait-man-2.webp
+  portrait-modern-man-23-2147961419-400x400.jpg
+  portrait-modern-man-23-2147961419-400x400.webp
+  portrait-pretty-young-woman-with-chin-her-hand-against-pink-wallpaper-23-2148048834-400x266.jpg
+  portrait-pretty-young-woman-with-chin-her-hand-against-pink-wallpaper-23-2148048834-400x266.webp
+  uslugi-manipulyatora-kharkov.jpg
+  uslugi-manipulyatora-kharkov_SM.jpg
+  wrecked-vehicle-1-2000x1118.jpeg
+  young-woman-her-new-car-smiling-53419-7219-400x211.jpg
+  young-woman-her-new-car-smiling-53419-7219-400x211.webp
+
+Итого: 36 файлов, 5330.5 КБ (5.21 МБ)

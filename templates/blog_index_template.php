@@ -5,10 +5,10 @@
  */
 
 // 1. Header
-require_smart('header.php', $lang, $ua_includes, $root_includes);
+require_smart('header.php');
 
 // 2. Хлебные крошки
-require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
+require_smart('breadcrumbs.php');
 
 // 3. Получаем статьи
 $articles = $db->select('pages', '*', [
@@ -67,5 +67,5 @@ if (!empty($blocks)) {
 }
 
 // Footer
-require_smart('footer.php', $lang, $ua_includes, $root_includes);
+require_smart('footer.php');
 ?>

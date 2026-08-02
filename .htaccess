@@ -2,15 +2,29 @@ RewriteEngine On
 RewriteBase /
 
 # --- РОКИРОВКА (должна быть ПЕРВОЙ) ---
-RewriteRule ^ua/uslugi-manipulyatora-kharkov/?$ /ua/manipulator-kharkov [R=301,L]
-RewriteRule ^uslugi-manipulyatora-kharkov/?$ /manipulator-kharkov [R=301,L]
+# Манипулятор: ВСЕ старые адреса -> /evakuator-manipulator-kharkov (реальная БД-страница)
+RewriteRule ^ua/uslugi-manipulyatora-kharkov/?$ /ua/evakuator-manipulator-kharkov [R=301,L]
+RewriteRule ^uslugi-manipulyatora-kharkov/?$ /evakuator-manipulator-kharkov [R=301,L]
 
-RewriteRule ^ua/Arenda-Krana-Manipulyatora(\.php|\.html)?$ /ua/manipulator-kharkov [R=301,L]
-RewriteRule ^Arenda-Krana-Manipulyatora(\.php|\.html)?$ /manipulator-kharkov [R=301,L]
+RewriteRule ^ua/Arenda-Krana-Manipulyatora(\.php|\.html)?$ /ua/evakuator-manipulator-kharkov [R=301,L]
+RewriteRule ^Arenda-Krana-Manipulyatora(\.php|\.html)?$ /evakuator-manipulator-kharkov [R=301,L]
+
+RewriteRule ^ua/manipulator-kharkov/?$ /ua/evakuator-manipulator-kharkov [R=301,L]
+RewriteRule ^manipulator-kharkov/?$ /evakuator-manipulator-kharkov [R=301,L]
 
 RewriteRule ^ua/vykup-bityh-avtomobilej-v-harkove(\.php|\.html)?$ /ua/avtovykup-kharkov [R=301,L]
 RewriteRule ^vykup-bityh-avtomobilej-v-harkove(\.php|\.html)?$ /avtovykup-kharkov [R=301,L]
 
+RewriteRule ^ua/Evakuatsiya-spetstekhniki-v-Kharkove(\.php|\.html)?$ /ua/Perevozka-spetstekhniki-Kharkov [R=301,L]
+RewriteRule ^Evakuatsiya-spetstekhniki-v-Kharkove(\.php|\.html)?$ /Perevozka-spetstekhniki-Kharkov [R=301,L]
+
+# Блог: news -> blog
+RewriteRule ^ua/news/?$ /ua/blog [R=301,L]
+RewriteRule ^news/?$ /blog [R=301,L]
+
+# evakuator-services (дубль главной) -> главная
+RewriteRule ^ua/evakuator-services/?$ /ua/ [R=301,L]
+RewriteRule ^evakuator-services/?$ / [R=301,L]
 
 # --- БЛОК 1: Убираем index и index.php ---
 RewriteCond %{THE_REQUEST} /index(\.php)? [NC]
@@ -38,6 +52,10 @@ RewriteRule ^ /%1 [L,R=301]
 # 5. Удаление .php
 RewriteCond %{THE_REQUEST} " /([^ ]+)\.php"
 RewriteRule ^ /%1 [L,R=301]
+
+
+# Динамическая карта блога: /sitemap-blog.xml -> sitemap-blog.php
+RewriteRule ^sitemap-blog\.xml$ /sitemap-blog.php [L]
 
 
 # --- БЛОК 4: ПОДКЛЮЧЕНИЕ ФАЙЛОВ (Физических) ---
@@ -71,8 +89,8 @@ RewriteRule ^([^/]+)$ router.php?slug=$1&lang=ru [L,QSA]
 
 # --- БЛОК 5: ЗАЩИТА И ПРИВАТНОСТЬ ---
 
-# 1. Запрещаем доступ к базе и конфигам
-<FilesMatch "^(data\.json|my_site_database\.db|db_connect\.php|config\.php)$">
+# 1. Запрещаем прямой доступ к базе и конфигам (внутренние include не затрагиваются)
+<FilesMatch "^(data\.json|my_site_database\.db|db_connect\.php|config\.php|db\.php|Medoo\.php)$">
     Order Allow,Deny
     Deny from all
 </FilesMatch>
@@ -81,4 +99,24 @@ RewriteRule ^([^/]+)$ router.php?slug=$1&lang=ru [L,QSA]
 <FilesMatch "^(admin\.php|sitemap_gen\.php)$">
     Header set X-Robots-Tag "noindex, nofollow"
 </FilesMatch>
+
+
+# --- БЛОК 6: КЭШИРОВАНИЕ СТАТИКИ ---
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp     "access plus 1 year"
+    ExpiresByType image/jpeg     "access plus 1 year"
+    ExpiresByType image/png      "access plus 1 year"
+    ExpiresByType image/gif      "access plus 1 year"
+    ExpiresByType image/svg+xml  "access plus 1 year"
+    ExpiresByType image/x-icon   "access plus 1 year"
+    ExpiresByType font/woff2     "access plus 1 year"
+    ExpiresByType text/css       "access plus 14 days"
+    ExpiresByType application/javascript "access plus 14 days"
+</IfModule>
+
+# gzip/brotli-сжатие текстовых ресурсов
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript text/javascript image/svg+xml application/json
+</IfModule>
 

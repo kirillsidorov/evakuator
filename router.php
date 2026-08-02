@@ -5,7 +5,7 @@
 // 1. ПОДКЛЮЧАЕМ БАЗУ И КОНФИГ
 require_once 'db.php';
 require_once 'config.php';
-require_once 'includes/theme_functions.php';
+require_once 'components/theme_functions.php';
 
 // 2. РАЗБИРАЕМ URL
 $request_uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
@@ -28,6 +28,13 @@ $page = $db->get('pages', '*', [
 
 // Если страница не найдена
 if (!$page) {
+    header("HTTP/1.0 404 Not Found");
+    echo "<h1>404</h1><p>Страница не найдена.</p>";
+    exit;
+}
+
+// Отложенная публикация: статья с будущей датой ещё недоступна
+if (($page['type'] ?? '') === 'articles' && !empty($page['date']) && $page['date'] > date('Y-m-d')) {
     header("HTTP/1.0 404 Not Found");
     echo "<h1>404</h1><p>Страница не найдена.</p>";
     exit;

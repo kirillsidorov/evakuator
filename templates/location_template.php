@@ -41,43 +41,48 @@ if (!empty($page)) {
 // === СБОРКА СТРАНИЦЫ ===
 
 // 1. Header
-require_smart('header.php', $lang, $ua_includes, $root_includes);
+require_smart('header.php');
 
 // 2. Хлебные крошки (не на главной)
 if ($slug !== 'home' && $slug !== '') {
-    require_smart('breadcrumbs.php', $lang, $ua_includes, $root_includes);
+    require_smart('breadcrumbs.php');
 }
 
 // 3. Hero блок
-require_smart('h1_block.php', $lang, $ua_includes, $root_includes);
-/*
+// Для сервисных страниц используем h1_service.php (без бейджа "Работаем 24/7",
+// который не всегда уместен — например, у СТО обычный график работы).
+// Для локаций/районов/маршрутов оставляем прежний h1_block.php.
+$hero_partial = ($page_type == 'services') ? 'h1_service.php' : 'h1_block.php';
+require_smart($hero_partial);
+
 // 4. SEO-блок маршрута (для межгорода — показывает расстояние, время, цену)
 if (!empty($dist_val) && !empty($time_val)) {
-    require_smart('route_seo_block.php', $lang, $ua_includes, $root_includes);
+    require_smart('route_seo_block.php');
 }
-*/
+
 // 5. Контентные блоки из БД
 if (!empty($blocks)) {
     foreach ($blocks as $block) {
         if ($block['block_type'] == 'include') {
-            // Карта — передаём данные
             if ($block['block_path'] == 'maps.php' && !empty($attrs['maps'])) {
                 $loc_map = $attrs['maps'];
             }
-            require_smart($block['block_path'], $lang, $ua_includes, $root_includes);
+            require_smart($block['block_path']);
+        }
+        elseif ($block['block_type'] == 'structured_content' 
+            || ($block['block_type'] == 'text' && strpos(trim($block['content']), '[') === 0 && json_decode(trim($block['content'])))) {
+            // JSON контент — парсим и рендерим (защита от неправильного block_type)
+            $items = json_decode(trim($block['content']), true);
+            if ($items) render_structured_content($items);
         }
         elseif ($block['block_type'] == 'text') {
             echo '<section class="sec"><div class="sec-inner"><div class="text-block">';
             echo apply_placeholders($block['content'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
             echo '</div></div></section>';
         }
-        elseif ($block['block_type'] == 'structured_content') {
-            $items = json_decode($block['content'], true);
-            if ($items) render_structured_content($items);
-        }
     }
 }
 
 // 6. Footer
-require_smart('footer.php', $lang, $ua_includes, $root_includes);
+require_smart('footer.php');
 ?>

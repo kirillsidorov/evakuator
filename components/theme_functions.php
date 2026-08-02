@@ -1,17 +1,13 @@
 <?php
-// includes/theme_functions.php
-// Обновлено: require_smart() ищет сначала в /components/, потом в /includes/
+// components/theme_functions.php
+// require_smart() подключает партиал из /components/
+// Обновлено 2: render_structured_content группирует p/h2/h3/li в одну <section>,
+// чтобы убрать визуальные "полоски" между блоками. Разрыв секции — только
+// перед/после highlight, cta, table, faq (у них свой контрастный фон).
 
-// 1. Пути
-$root_includes = $_SERVER['DOCUMENT_ROOT'] . '/includes/';
-$ua_includes   = $_SERVER['DOCUMENT_ROOT'] . '/includes/';
-$components    = $_SERVER['DOCUMENT_ROOT'] . '/components/';
-
-// 2. Функция умного подключения
-//    Приоритет: components/ → includes/
-//    Это позволяет постепенно переносить файлы в новый дизайн
+// Функция подключения партиала из /components/
 if (!function_exists('require_smart')) {
-    function require_smart($filename, $lang, $ua_path, $root_path) {
+    function require_smart($filename) {
         global $db, $page, $page_type, $slug, $settings, $h1, $breadcrumbs,
                $loc, $custom_h1, $custom_p, $custom_bg, $custom_btn, $loc_map,
                $title, $description, $dist_val, $time_val, $price_val,
@@ -20,17 +16,8 @@ if (!function_exists('require_smart')) {
 
         $components_path = $_SERVER['DOCUMENT_ROOT'] . '/components/';
 
-        // Приоритет 1: components/ (новый дизайн)
         if (file_exists($components_path . $filename)) {
             include $components_path . $filename;
-            return;
-        }
-
-        // Приоритет 2: includes/ (старый дизайн, fallback)
-        if ($lang == 'ua' && file_exists($ua_path . $filename)) {
-            include $ua_path . $filename;
-        } elseif (file_exists($root_path . $filename)) {
-            include $root_path . $filename;
         }
     }
 }
@@ -61,40 +48,64 @@ if (!function_exists('apply_placeholders')) {
 }
 
 // 4. Рендеринг структурированных блоков (JSON → HTML)
-//    ОБНОВЛЕНО: использует классы нового дизайна вместо Mobirise
+//    p / h2 / h3 / li идут ПОДРЯД внутри одной открытой <section>,
+//    чтобы не давать визуальных "швов" между соседними блоками.
+//    highlight / cta / table / faq всегда закрывают текущую секцию
+//    и рисуют свой отдельный блок (у них контрастный фон/полоса).
 if (!function_exists('render_structured_content')) {
     function render_structured_content($items) {
         global $loc, $price_val, $dist_val, $time_val, $settings, $lang;
 
         if (!is_array($items)) return;
 
+        $section_open = false;
+
         foreach ($items as $index => $item) {
-            $type = $item['type'];
-            $content = $item['content'];
+            $type = $item['type'] ?? '';
+            $content = $item['content'] ?? null;
             $name    = $loc['name'] ?? '';
             $in_city = $loc['in_city'] ?? '';
 
+            $is_flow_type = in_array($type, ['h2', 'p', 'li', 'h3']);
+
+            // Открываем общую секцию перед "обычным" блоком, если она ещё не открыта
+            if ($is_flow_type && !$section_open) {
+                echo '<section class="sec"><div class="sec-inner">';
+                $section_open = true;
+            }
+            // Закрываем общую секцию перед "особым" блоком, если она была открыта
+            if (!$is_flow_type && $section_open) {
+                echo '</div></section>';
+                $section_open = false;
+            }
+
             if ($type == 'h2') {
                 $h2_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                echo '<section class="sec"><div class="sec-inner">';
                 echo '<div class="sec-title">' . $h2_text . '</div>';
-                echo '</div></section>';
             }
             elseif ($type == 'p') {
-                $p_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                echo '<section class="sec"><div class="sec-inner">';
-                echo '<div class="text-block">' . $p_text . '</div>';
-                echo '</div></section>';
+                // content может быть строкой ИЛИ массивом строк (несколько абзацев в одном блоке)
+                echo '<div class="text-block">';
+                if (is_array($content)) {
+                    foreach ($content as $para) {
+                        $p_text = apply_placeholders($para, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+                        echo '<p>' . $p_text . '</p>';
+                    }
+                } else {
+                    $p_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+                    echo $p_text;
+                }
+                echo '</div>';
             }
             elseif ($type == 'li') {
-                echo '<section class="sec"><div class="sec-inner"><ul class="num-list">';
-                if (is_array($content)) {
-                    foreach ($content as $i => $li) {
-                        $li_text = apply_placeholders($li, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                        echo '<li><div class="num">' . ($i + 1) . '</div><span>' . $li_text . '</span></li>';
-                    }
+                echo '<ul class="num-list">';
+                // Подстраховка: если случайно прилетит строка — оборачиваем в массив
+                $items_list = is_array($content) ? $content : [$content];
+                foreach ($items_list as $i => $li) {
+                    $li_text = apply_placeholders($li, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+                    echo '<li><div class="num">' . ($i + 1) . '</div><span>' . $li_text . '</span></li>';
                 }
-                echo '</ul></div></section>';
+                echo '</ul>';
             }
             elseif ($type == 'h3') {
                 if (empty($content) && isset($item['h'])) {
@@ -104,7 +115,6 @@ if (!function_exists('render_structured_content')) {
                 if (is_array($content)) {
                     $h3_text = apply_placeholders($content['h'] ?? '', $name, $in_city, $price_val, $dist_val, $time_val, $settings);
                     $h3_p    = apply_placeholders($content['p'] ?? '', $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                    echo '<section class="sec"><div class="sec-inner">';
                     echo '<div class="sec-title" style="font-size:clamp(22px,5vw,30px)">' . $h3_text . '</div>';
                     if ($h3_p) {
                         echo '<div class="text-block">' . $h3_p . '</div>';
@@ -112,12 +122,9 @@ if (!function_exists('render_structured_content')) {
                     if (!empty($content['image'])) {
                         echo '<img src="' . $content['image'] . '" alt="' . htmlspecialchars(strip_tags($h3_text)) . '" loading="lazy" style="border-radius:12px;margin-top:20px;box-shadow:0 10px 30px rgba(0,0,0,.08)">';
                     }
-                    echo '</div></section>';
                 } else {
                     $h3_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                    echo '<section class="sec"><div class="sec-inner">';
                     echo '<div class="sec-title" style="font-size:clamp(22px,5vw,30px)">' . $h3_text . '</div>';
-                    echo '</div></section>';
                 }
             }
             elseif ($type == 'highlight') {
@@ -125,6 +132,33 @@ if (!function_exists('render_structured_content')) {
                 echo '<section class="sec" style="background:#f8f8f6"><div class="sec-inner">';
                 echo '<div class="text-block" style="background:#fff;border-radius:12px;padding:24px;border-left:4px solid #e9ff00">' . $hl_text . '</div>';
                 echo '</div></section>';
+            }
+            elseif ($type == 'cta') {
+                $default_text = ($lang == 'ua')
+                    ? 'Прорахуйте вартість замовлення прямо зараз!'
+                    : 'Просчитайте стоимость заказа прямо сейчас!';
+
+                $default_btn = ($lang == 'ua')
+                    ? 'Викликати евакуатор ' . $in_city
+                    : 'Вызвать эвакуатор ' . $in_city;
+
+                $cta_text_raw = is_array($content) ? ($content['text'] ?? $default_text) : $default_text;
+                $cta_btn_raw  = is_array($content) ? ($content['btn']  ?? $default_btn)  : $default_btn;
+
+                $cta_text = apply_placeholders($cta_text_raw, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+                $cta_btn  = apply_placeholders($cta_btn_raw,  $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+
+                $tel = $settings['tel_one_link'] ?? '';
+
+                echo '<div class="band">';
+                echo '<div class="band-inner">';
+                echo '<div class="band-title">' . $cta_text . '</div>';
+                echo '<a href="tel:' . htmlspecialchars($tel) . '" class="band-cta">';
+                echo '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.55 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012.44 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>';
+                echo $cta_btn;
+                echo '</a>';
+                echo '</div>';
+                echo '</div>';
             }
             elseif ($type == 'table') {
                 $tbl_title = apply_placeholders($item['title'] ?? '', $name, $in_city, $price_val, $dist_val, $time_val, $settings);
@@ -185,6 +219,11 @@ if (!function_exists('render_structured_content')) {
                     echo '</div></div></section>';
                 }
             }
+        }
+
+        // Закрываем секцию, если она осталась открытой после последнего блока
+        if ($section_open) {
+            echo '</div></section>';
         }
     }
 }

@@ -1,77 +1,80 @@
 <?php
-// news.php
+// news.php — Блог (новый дизайн)
 include_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 
 $page_type = 'archive';
 
-// Мета-теги для самой страницы блога (можно тоже вынести в базу, но пока оставим как есть)
-$title = "ᐈ Блог | 《Услуги Эвакуатора》Харьков и Область |  " . $settings['tel_one_view'] ;
-$description = "【Услуги Эвакуатора Харьков и Область 】⭐ 050-851-7555. Быстрая подача от 20 минут. ";
+// Мета-теги страницы блога
+$title = ($lang == 'ua')
+    ? "Блог компанії Евакуатор Харків | Корисні статті"
+    : "Блог компании Эвакуатор Харьков | Полезные статьи";
+$description = ($lang == 'ua')
+    ? "Корисні статті про евакуацію авто, обслуговування СТО та автовикуп у Харкові. Поради, інструкції та новини компанії Евакуатор Харків."
+    : "Полезные статьи об эвакуации авто, обслуживании СТО и автовыкупе в Харькове. Советы, инструкции и новости компании Эвакуатор Харьков.";
 
-$breadcrumb_title = ($lang == 'ua') ? 'Блог компанії "Евакуатор Харків"' : 'Блог компании "Эвакуатор Харьков"';
+$breadcrumb_title = ($lang == 'ua') ? 'Блог' : 'Блог';
 $h1_title = ($lang == 'ua') ? 'Блог компанії "Евакуатор Харків"' : 'Блог компании "Эвакуатор Харьков"';
 $btn_text = ($lang == 'ua') ? 'Детальніше' : 'Подробнее';
+$empty_text = ($lang == 'ua') ? 'Статей поки немає.' : 'Статей пока нет.';
+$link_prefix = ($lang == 'ua') ? '/ua/' : '/';
 
-// --- НОВАЯ ЛОГИКА: БЕРЕМ СТАТЬИ ИЗ БАЗЫ ---
+// Берём статьи из базы (будущие даты скрыты — автопубликация)
 $articles = $db->select('pages', '*', [
-    'type' => 'articles',
-    'lang' => $lang,           // Фильтруем по текущему языку сайта
-    'ORDER' => ['id' => 'DESC'] // Сначала новые (по ID)
+    'type'  => 'articles',
+    'lang'  => $lang,
+    'OR' => [
+        'date[<=]' => date('Y-m-d'),
+        'date'     => null,
+    ],
+    'ORDER' => ['date' => 'DESC', 'id' => 'DESC']
 ]);
 
-include $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
-include $_SERVER['DOCUMENT_ROOT'] . '/includes/breadcrumbs.php';
+// человекочитаемая дата
+$ru_months = ['', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+$ua_months = ['', 'січня', 'лютого', 'березня', 'квітня', 'травня', 'червня', 'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+$fmt_date = function ($d) use ($lang, $ru_months, $ua_months) {
+    if (empty($d)) return '';
+    $ts = strtotime($d);
+    $m = ($lang == 'ua') ? $ua_months : $ru_months;
+    return (int)date('j', $ts) . ' ' . $m[(int)date('n', $ts)] . ' ' . date('Y', $ts);
+};
+
+include $_SERVER['DOCUMENT_ROOT'] . '/components/header.php';
+include $_SERVER['DOCUMENT_ROOT'] . '/components/breadcrumbs.php';
 ?>
 
-<section class="mbr-section content4 cid-sDSrw8qCmX" id="ij">
-    <div class="container">
-        <div class="media-container-row">
-            <div class="title col-12 col-md-8">
-                <h1 class="align-center pb-3 mbr-fonts-style display-2"><?= $h1_title ?></h1>
-            </div>
-        </div>
+<section class="sec" style="padding-bottom:10px;">
+    <div class="sec-inner">
+        <h1 class="sec-title" style="margin-bottom:10px;font-size:clamp(32px,8vw,48px);"><?= $h1_title ?></h1>
     </div>
 </section>
 
-<section class="features3 cid-sDH4ywWIgz" id="features3-ft">
-    <div class="container">
-        <div class="row">
-            <?php if (!empty($articles)): ?>
-                <?php foreach ($articles as $item): 
-                    // Формируем правильную ссылку в зависимости от языка
-                    $link_prefix = ($lang == 'ua') ? '/ua/' : '/';
-                    $article_link = $link_prefix . $item['slug'];
-                ?>
-                <div class="card p-3 col-12 col-md-6 col-lg-4">
-                    <div class="card-wrapper">
-                        <div class="card-img">
-                            <img src="<?= $item['hero_image'] ?>" alt="<?= $item['breadcrumb_title'] ?>">
-                        </div>
-                        <div class="card-box">
-                            <h4 class="card-title mbr-fonts-style display-7">
-                                <?= $item['breadcrumb_title'] ?>
-                            </h4>
-                            <p class="mbr-text mbr-fonts-style display-7">
-                                <?= $item['meta_description'] ?>
-                            </p>
-                        </div>
-                        <div class="mbr-section-btn text-center">
-                            <a href="<?= $article_link ?>" class="btn btn-primary display-4">
-                                <?= $btn_text ?>
-                            </a>
-                        </div>
-                    </div>
+<section class="sec">
+    <div class="sec-inner">
+        <?php if (!empty($articles)): ?>
+        <div class="blog-grid">
+            <?php foreach ($articles as $item):
+                $link = $link_prefix . ltrim($item['slug'], '/');
+            ?>
+            <a href="<?= $link ?>" class="blog-card">
+                <?php if (!empty($item['hero_image'])): ?>
+                    <img src="<?= htmlspecialchars($item['hero_image']) ?>"
+                         alt="<?= htmlspecialchars($item['breadcrumb_title']) ?>"
+                         loading="lazy">
+                <?php endif; ?>
+                <div class="blog-body">
+                    <?php if (!empty($item['date'])): ?><div class="blog-date" style="color:#8a8a8a;font-size:13px;margin-bottom:6px;"><?= $fmt_date($item['date']) ?></div><?php endif; ?>
+                    <div class="blog-title"><?= htmlspecialchars($item['breadcrumb_title']) ?></div>
+                    <div class="blog-desc"><?= htmlspecialchars(mb_substr($item['meta_description'] ?? '', 0, 140)) ?></div>
+                    <span class="blog-btn"><?= $btn_text ?></span>
                 </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="col-12">
-                    <p class="text-center">
-                        <?= ($lang == 'ua') ? 'Статей поки немає.' : 'Статей пока нет.' ?>
-                    </p>
-                </div>
-            <?php endif; ?>
+            </a>
+            <?php endforeach; ?>
         </div>
+        <?php else: ?>
+            <p style="text-align:center;color:#888;"><?= $empty_text ?></p>
+        <?php endif; ?>
     </div>
 </section>
 
-<?php include $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php'; ?>
+<?php include $_SERVER['DOCUMENT_ROOT'] . '/components/footer.php'; ?>

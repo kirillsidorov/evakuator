@@ -6,14 +6,14 @@ include_once $_SERVER['DOCUMENT_ROOT'] . '/config.php';
 $page_type = 'main';
 $lang = (strpos($_SERVER['REQUEST_URI'], '/ua') === 0) ? 'ua' : 'ru';
 $lp = ($lang == 'ua') ? '/ua/' : '/'; // link prefix
+$price_meta = $settings['price_car'] ?? '1000';
 
-// Мета-теги
 if ($lang == 'ua') {
-    $title = "Евакуатор Харків 24/7 — термінове звернення за 20–30 хвилин | Автосос";
-    $description = "Евакуатор Харків цілодобово. Термінове звернення за 20–30 хвилин. Безпечне перевезення будь-яких авто. Ціни від " . ($settings['price_car'] ?? '1000') . " грн. ✓ Усі райони міста. ☎ " . $settings['tel_one_view'];
+    $title = "Евакуатор Харків 24/7 | Від {$price_meta} грн | Подача 20 хв";
+    $description = "Евакуатор Харків цілодобово. Терміновий виклик за 20 хвилин. Безпечне перевезення будь-яких авто. Ціни від {$price_meta} грн. ✓ Усі райони міста. ☎ " . $settings['tel_one_view'];
 } else {
-    $title = "Эвакуатор Харьков 24/7 — срочный вызов за 20–30 минут | Автосос";
-    $description = "Эвакуатор Харьков круглосуточно. Срочный вызов за 20–30 минут. Безопасная перевозка любых авто. Цены от " . ($settings['price_car'] ?? '1000') . " грн. ✓ Все районы города. ☎ " . $settings['tel_one_view'];
+    $title = "Эвакуатор Харьков 24/7 | От {$price_meta} грн | Подача 20 мин";
+    $description = "Эвакуатор Харьков круглосуточно. Срочный вызов за 20 минут. Безопасная перевозка любых авто. Цены от {$price_meta} грн. ✓ Все районы города. ☎ " . $settings['tel_one_view'];
 }
 
 include $_SERVER['DOCUMENT_ROOT'] . '/components/header.php';
@@ -27,8 +27,8 @@ include $_SERVER['DOCUMENT_ROOT'] . '/components/header.php';
   <div class="hero-body">
     <div class="hero-badge"><div class="hero-badge-dot"></div><?= ($lang == 'ua') ? 'Працюємо 24/7' : 'Работаем 24/7' ?></div>
     <h1><?= ($lang == 'ua')
-        ? 'Евакуатор Харків<br>24/7'
-        : 'Эвакуатор Харьков<br>24/7' ?></h1>
+        ? 'Евакуатор Харків <br>24/7'
+        : 'Эвакуатор Харьков <br>24/7' ?></h1>
     <p class="hero-sub"><?= ($lang == 'ua') ? 'Термінове звернення за 20–30 хвилин · Безпечне перевезення · Найкращі ціни' : 'Срочный вызов за 20–30 минут · Безопасная перевозка · Лучшие цены' ?></p>
     <div class="hero-price">
       <span class="hero-price-from"><?= ($lang == 'ua') ? 'від' : 'от' ?></span>
@@ -143,9 +143,9 @@ flush();
     <div class="sec-label"><?= ($lang == 'ua') ? 'Послуги' : 'Услуги' ?></div>
     <h2 class="sec-title"><?= ($lang == 'ua') ? 'Послуги евакуації' : 'Услуги эвакуации' ?></h2>
     <div class="services-grid">
-      <a href="<?= $lp ?>evakuator-services" class="service-card">
+      <a href="<?= $lp ?>evakuatsiya-kvadrotsiklov-i-mototekhniki" class="service-card">
         <div class="service-num">01</div>
-        <div><h3 style="font-size:inherit;font-weight:inherit;margin:0"><?= ($lang == 'ua') ? 'Евакуація легкових автомобілів' : 'Эвакуация легковых автомобилей' ?></h3></div>
+        <div><h3 style="font-size:inherit;font-weight:inherit;margin:0"><?= ($lang == 'ua') ? 'Евакуація мотоциклів і квадро' : 'Эвакуация мотоциклов и квадро' ?></h3></div>
         <span class="service-arrow">›</span>
       </a>
       <a href="<?= $lp ?>gruzovoy-evakuator-kharkov" class="service-card">

@@ -1,0 +1,13 @@
+extract.py
+
+# Секреты и дампы — никогда не коммитим
+secrets.php
+*.sql
+*.sql.gz
+*.bak
+.well-known/pki-validation/CA602FEBC1D321B41055E2623E72FA5F.txt
+assets/bootstrap/css/bootstrap-grid.min.css
+assets/bootstrap/css/bootstrap-reboot.min.css
+assets/bootstrap/css/bootstrap.min.css
+assets/bootstrap/js/bootstrap.min.js
+assets/css/theme.css
