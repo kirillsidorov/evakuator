@@ -3,6 +3,16 @@
  * ШАБЛОН: Хаб (агрегатор)
  * Для страниц "Харьковская область", "По Украине"
  * Показывает hero + текст + сетку дочерних страниц с ценами
+ *
+ * Обновлено (фиксы):
+ *   1. ЦЕНА СЧИТАЕТСЯ ОБЩЕЙ ФУНКЦИЕЙ calc_page_price().
+ *      Раньше здесь была своя копия формулы с обратным приоритетом:
+ *      расстояние перебивало ручную attributes.price, а в router.php —
+ *      наоборот. При выставленной ручной цене таблица хаба и сама
+ *      страница направления показывали разные цифры.
+ *      Двойка (обратная дорога) тоже была захардкожена — теперь
+ *      берётся из настройки price_return_factor.
+ *   2. Guard от повторного подключения одного и того же партиала.
  */
 
 global $settings;
@@ -31,13 +41,17 @@ if (!empty($page)) {
 
 // === СБОРКА ===
 
+$rendered_includes = [];
+
 require_smart('header.php');
 
 if ($slug !== 'home' && $slug !== '') {
     require_smart('breadcrumbs.php');
+    $rendered_includes['breadcrumbs.php'] = true;
 }
 
 require_smart('h1_block.php');
+$rendered_includes['h1_block.php'] = true;
 
 // === ДОЧЕРНИЕ СТРАНИЦЫ (таблица маршрутов) ===
 $children = $db->select('pages', '*', [
@@ -46,10 +60,8 @@ $children = $db->select('pages', '*', [
     'ORDER'     => ['breadcrumb_title' => 'ASC']
 ]);
 
-$is_ua = ($lang === 'ua');
+$is_ua  = ($lang === 'ua');
 $prefix = $is_ua ? '/ua/' : '/';
-$price_per_km = (int)($settings['price_km'] ?? 30);
-$base_min     = (int)($settings['price_feed'] ?? 1000);
 
 if (!empty($children)):
     $col_city  = $is_ua ? 'Напрямок'  : 'Направление';
@@ -78,20 +90,14 @@ if (!empty($children)):
                     $c_name  = $child['breadcrumb_title'] ?? strip_tags($child['h1']);
                     $c_link  = $prefix . ltrim($child['slug'], '/');
 
-                    // Рассчитываем цену
-                    if (!empty($c_dist)) {
-                        $c_price = round(((float)$c_dist * $price_per_km * 2) + $base_min, -2);
-                    } elseif (!empty($c_attrs['price'])) {
-                        $c_price = $c_attrs['price'];
-                    } else {
-                        $c_price = $settings['price_car'] ?? 1000;
-                    }
+                    // Общая функция — та же, что в router.php
+                    $c_price = calc_page_price($c_attrs, $child['location_type'] ?? 'city', $settings);
                 ?>
                 <tr>
                     <td><a href="<?= $c_link ?>"><?= htmlspecialchars($c_name) ?></a></td>
-                    <td><?= $c_dist ? $c_dist . ' ' . ($is_ua ? 'км' : 'км') : '—' ?></td>
+                    <td><?= $c_dist ? $c_dist . ' км' : '—' ?></td>
                     <td><?= $c_time ?: '—' ?></td>
-                    <td><strong><?= number_format($c_price, 0, '', ' ') ?></strong></td>
+                    <td><strong><?= number_format((float)$c_price, 0, '', ' ') ?></strong></td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -105,17 +111,25 @@ if (!empty($children)):
 // Контентные блоки из БД
 if (!empty($blocks)) {
     foreach ($blocks as $block) {
-        if ($block['block_type'] == 'include') {
-            if ($block['block_path'] == 'maps.php' && !empty($attrs['maps'])) {
+        $bt = $block['block_type'] ?? '';
+
+        if ($bt === 'include') {
+            $path = $block['block_path'] ?? '';
+            if ($path === '' || !empty($rendered_includes[$path])) continue;
+            $rendered_includes[$path] = true;
+
+            if ($path === 'maps.php' && !empty($attrs['maps'])) {
                 $loc_map = $attrs['maps'];
             }
-            require_smart($block['block_path']);
-        } elseif ($block['block_type'] == 'text') {
+            require_smart($path);
+        }
+        elseif ($bt === 'text') {
             echo '<section class="sec"><div class="sec-inner"><div class="text-block">';
             echo apply_placeholders($block['content'], $city_val, $in_city_val, $price_val, $dist_val, $time_val, $settings);
             echo '</div></div></section>';
-        } elseif ($block['block_type'] == 'structured_content') {
-            $items = json_decode($block['content'], true);
+        }
+        elseif ($bt === 'structured_content') {
+            $items = json_decode(trim((string)$block['content']), true);
             if ($items) render_structured_content($items);
         }
     }

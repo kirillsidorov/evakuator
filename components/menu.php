@@ -1,5 +1,7 @@
 <?php
 // components/menu.php
+// Обновлено: переключатель языка больше не ведёт в 404 на страницах,
+// у которых нет второй языковой версии. См. alt_lang_url() в theme_functions.php.
 
 $link_prefix = ($lang == 'ua') ? '/ua/' : '/';
 
@@ -31,7 +33,14 @@ $link_ru = $path_clean;
 $link_ua = '/ua' . ($path_clean == '/' ? '' : $path_clean);
 
 $switch_label = ($lang == 'ru') ? 'UA' : 'RU';
-$switch_link  = ($lang == 'ru') ? $link_ua : $link_ru;
+
+// Раньше здесь было: $switch_link = ($lang == 'ru') ? $link_ua : $link_ru;
+// Кнопка строила '/ua/' . slug вслепую, не проверяя, заведена ли вторая
+// версия в БД, и на страницах без перевода вела прямо в 404
+// (см. /ua/evakuaciya-avto-zimoy в error_log).
+// Теперь: есть перевод — ведём на него, нет — на главную второго языка.
+$alt_switch  = function_exists('alt_lang_url') ? alt_lang_url($db ?? null, $page ?? [], $lang) : null;
+$switch_link = $alt_switch ?: (($lang == 'ru') ? '/ua/' : '/');
 ?>
 
 <nav class="nav">

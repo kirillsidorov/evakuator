@@ -1,9 +1,11 @@
 <?php
 // components/theme_functions.php
-// require_smart() подключает партиал из /components/
-// Обновлено 2: render_structured_content группирует p/h2/h3/li в одну <section>,
-// чтобы убрать визуальные "полоски" между блоками. Разрыв секции — только
-// перед/после highlight, cta, table, faq (у них свой контрастный фон).
+// Обновлено 3 (SEO-фикс):
+//   - type h2  -> реальный <h2 class="sec-title">      (было <div class="sec-title">)
+//   - type h3  -> реальный <h3 class="sec-title sec-title--sm">
+//   - заголовки table и faq -> <h2 class="sec-title">
+//   - инлайн font-size у h3 убран, вынесен в класс .sec-title--sm
+// Логика группировки секций не менялась.
 
 // Функция подключения партиала из /components/
 if (!function_exists('require_smart')) {
@@ -41,17 +43,84 @@ if (!function_exists('apply_placeholders')) {
             $text = str_replace('{viber_link}', $settings['viber_clean'] ?? '', $text);
             $text = str_replace('{tg_user}', $settings['telegram_user'] ?? '', $text);
             $text = str_replace('{price_km}', $settings['price_km'] ?? '', $text);
+            // Подача за город и базовый тариф — нужны в мета-описаниях,
+            // чтобы показывать структуру цены, а не итог маршрута.
+            $text = str_replace('{price_feed}', $settings['price_feed'] ?? '', $text);
+            $text = str_replace('{price_car}',  $settings['price_car'] ?? '', $text);
         }
 
         return $text;
     }
 }
 
+// 3.1 ЕДИНОЕ ОПРЕДЕЛЕНИЕ ЯЗЫКА
+//     Раньше логика жила в трёх местах — config.php, router.php, header.php —
+//     и в двух из них была написана как strpos($uri, '/ua') === 0, без слэша.
+//     Из-за этого страница вроде /uaz-evakuator считалась украинской.
+if (!function_exists('detect_lang')) {
+    function detect_lang($uri) {
+        $path = parse_url((string)$uri, PHP_URL_PATH);
+        if ($path === false || $path === null || $path === '') $path = '/';
+        return preg_match('~^/ua(/|$)~', $path) ? 'ua' : 'ru';
+    }
+}
+
+// 3.2 URL АЛЬТЕРНАТИВНОЙ ЯЗЫКОВОЙ ВЕРСИИ (или null, если её нет)
+//     Кнопка UA/RU в menu.php и hreflang в header.php раньше строили
+//     '/ua/' . slug вслепую, не проверяя, заведена ли вторая версия.
+//     Кнопка вела в 404, а hreflang на 404 заставляет Google отбросить
+//     всю языковую связку целиком — выпадают обе версии.
+if (!function_exists('alt_lang_url')) {
+    function alt_lang_url($db, $page, $lang) {
+        if (!is_array($page)) return null;
+        if (($page['type'] ?? '') === '404') return null;
+
+        $slug = (string)($page['slug'] ?? '');
+        if ($slug === '') return null;
+
+        $alt = ($lang === 'ua') ? 'ru' : 'ua';
+
+        if (!is_object($db) || !method_exists($db, 'has')) return null;
+        if (!$db->has('pages', ['slug' => $slug, 'lang' => $alt])) return null;
+
+        $prefix = ($alt === 'ua') ? '/ua/' : '/';
+        if ($slug === 'home') return ($alt === 'ua') ? '/ua/' : '/';
+
+        return $prefix . $slug;
+    }
+}
+
+// 3.5 ЕДИНЫЙ РАСЧЁТ ЦЕНЫ
+//     Раньше логика жила в двух местах — в router.php и в hub_template.php —
+//     и порядок приоритетов там отличался. Из-за этого цена в таблице
+//     хаба могла не совпадать с ценой на самой странице направления.
+//     Теперь оба места зовут эту функцию.
+if (!function_exists('calc_page_price')) {
+    function calc_page_price($attrs, $location_type, $settings) {
+        $per_km = (int)($settings['price_km'] ?? 30);
+        $base   = (int)($settings['price_feed'] ?? 1000);
+        $factor = (float)($settings['price_return_factor'] ?? 2);
+
+        // 1. Ручная цена всегда выигрывает
+        if (!empty($attrs['price'])) {
+            return $attrs['price'];
+        }
+        // 2. Район города — фиксированный тариф
+        if ($location_type === 'district') {
+            return $settings['price_car'] ?? 1000;
+        }
+        // 3. Межгород — расстояние * тариф * коэффициент обратной дороги + подача
+        if (!empty($attrs['distance'])) {
+            return round(((float)$attrs['distance'] * $per_km * $factor) + $base, -2);
+        }
+        // 4. Фолбэк
+        return $settings['price_car'] ?? 1000;
+    }
+}
+
 // 4. Рендеринг структурированных блоков (JSON → HTML)
-//    p / h2 / h3 / li идут ПОДРЯД внутри одной открытой <section>,
-//    чтобы не давать визуальных "швов" между соседними блоками.
-//    highlight / cta / table / faq всегда закрывают текущую секцию
-//    и рисуют свой отдельный блок (у них контрастный фон/полоса).
+//    p / h2 / h3 / li идут ПОДРЯД внутри одной открытой <section>.
+//    highlight / cta / table / faq всегда закрывают текущую секцию.
 if (!function_exists('render_structured_content')) {
     function render_structured_content($items) {
         global $loc, $price_val, $dist_val, $time_val, $settings, $lang;
@@ -81,7 +150,8 @@ if (!function_exists('render_structured_content')) {
 
             if ($type == 'h2') {
                 $h2_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                echo '<div class="sec-title">' . $h2_text . '</div>';
+                // >>> SEO: реальный заголовок вместо div
+                echo '<h2 class="sec-title">' . $h2_text . '</h2>';
             }
             elseif ($type == 'p') {
                 // content может быть строкой ИЛИ массивом строк (несколько абзацев в одном блоке)
@@ -115,7 +185,8 @@ if (!function_exists('render_structured_content')) {
                 if (is_array($content)) {
                     $h3_text = apply_placeholders($content['h'] ?? '', $name, $in_city, $price_val, $dist_val, $time_val, $settings);
                     $h3_p    = apply_placeholders($content['p'] ?? '', $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                    echo '<div class="sec-title" style="font-size:clamp(22px,5vw,30px)">' . $h3_text . '</div>';
+                    // >>> SEO: реальный заголовок, размер через класс, не инлайном
+                    echo '<h3 class="sec-title sec-title--sm">' . $h3_text . '</h3>';
                     if ($h3_p) {
                         echo '<div class="text-block">' . $h3_p . '</div>';
                     }
@@ -124,7 +195,7 @@ if (!function_exists('render_structured_content')) {
                     }
                 } else {
                     $h3_text = apply_placeholders($content, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
-                    echo '<div class="sec-title" style="font-size:clamp(22px,5vw,30px)">' . $h3_text . '</div>';
+                    echo '<h3 class="sec-title sec-title--sm">' . $h3_text . '</h3>';
                 }
             }
             elseif ($type == 'highlight') {
@@ -154,7 +225,7 @@ if (!function_exists('render_structured_content')) {
                 echo '<div class="band-inner">';
                 echo '<div class="band-title">' . $cta_text . '</div>';
                 echo '<a href="tel:' . htmlspecialchars($tel) . '" class="band-cta">';
-                echo '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.55 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012.44 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>';
+                echo '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.55 11a19.79 19.79 0 01-3.07-8.67A2 2 0 012.44 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.18 6.18l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>';
                 echo $cta_btn;
                 echo '</a>';
                 echo '</div>';
@@ -167,7 +238,8 @@ if (!function_exists('render_structured_content')) {
 
                 echo '<section class="sec"><div class="sec-inner">';
                 if ($tbl_title) {
-                    echo '<div class="sec-title">' . htmlspecialchars($tbl_title) . '</div>';
+                    // >>> SEO: заголовок таблицы тоже реальный h2
+                    echo '<h2 class="sec-title">' . htmlspecialchars($tbl_title) . '</h2>';
                 }
                 echo '<div class="table-wrap"><table class="custom-table">';
 
@@ -208,11 +280,12 @@ if (!function_exists('render_structured_content')) {
 
                 if (!empty($faq_items)) {
                     echo '<section class="sec"><div class="sec-inner">';
-                    echo '<div class="sec-title">' . htmlspecialchars($faq_title) . '</div>';
+                    // >>> SEO: заголовок FAQ тоже реальный h2
+                    echo '<h2 class="sec-title">' . htmlspecialchars($faq_title) . '</h2>';
                     echo '<div class="faq">';
                     foreach ($faq_items as $fi) {
                         echo '<div class="faq-item">';
-                        echo '<button class="faq-q">' . htmlspecialchars($fi['q']) . '<span class="faq-icon">+</span></button>';
+                        echo '<button class="faq-q" type="button" aria-expanded="false">' . htmlspecialchars($fi['q']) . '<span class="faq-icon" aria-hidden="true">+</span></button>';
                         echo '<div class="faq-a">' . $fi['a'] . '</div>';
                         echo '</div>';
                     }

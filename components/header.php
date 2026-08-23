@@ -1,30 +1,63 @@
-<?php include $_SERVER['DOCUMENT_ROOT'] . '/config.php'; ?>
+<?php include_once $_SERVER['DOCUMENT_ROOT'] . '/config.php'; ?>
 <?php
-global $page, $settings;
+// header.php
+// Обновлено (SEO-фикс):
+//   1. CANONICAL И HREFLANG СТРОЯТСЯ ТОЛЬКО ИЗ ПУТИ, без query string.
+//      Раньше брался $_SERVER['REQUEST_URI'] целиком, и заход по рекламе
+//      на /slug?gclid=... отдавал самоканоникал вместе с gclid.
+//   2. На 404 canonical/hreflang не выводятся, добавляется noindex.
+//   3. $is_ua определяется регуляркой ^/ua(/|$), а не strpos(...)===0 —
+//      иначе под украинскую версию попадал любой /ua-что-угодно.
+//   4. include_once для config.php (раньше include — файл выполнялся дважды,
+//      т.к. router.php уже делает require_once).
+//   5. str_replace по '.php'/'.html' заменён на якорную регулярку —
+//      раньше вырезал эти подстроки в любом месте URL.
+
+global $page, $settings, $db;
 if (!isset($page) || !is_array($page)) {
     $page = ['id' => 0, 'type' => 'physical_file', 'meta_title' => $title ?? '', 'meta_description' => $description ?? ''];
 }
 
+$is_404 = (($page['type'] ?? '') === '404');
+
 $protocol    = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
 $host        = $_SERVER['HTTP_HOST'];
 $request_uri = $_SERVER['REQUEST_URI'];
-$is_ua       = (strpos($request_uri, '/ua') === 0);
-$lang        = $is_ua ? 'ua' : 'ru';
-$clean_path  = preg_replace('#^/ua#', '', $request_uri) ?: '/';
-$link_ru     = $clean_path;
-$link_ua     = str_replace('/ua//', '/ua/', '/ua' . $clean_path);
 
-if ($is_ua) {
-    $canonical_url = $protocol . $host . $link_ua;
-} else {
-    $canonical_url = $protocol . $host . $request_uri;
-}
-$canonical_url = str_replace(['index.php', '.html', '.php'], '', $canonical_url);
+// >>> Только путь. Никаких gclid, utm_source, fbclid в canonical.
+$path_only = parse_url($request_uri, PHP_URL_PATH);
+if ($path_only === false || $path_only === null || $path_only === '') $path_only = '/';
+
+// >>> Одна функция на весь проект (components/theme_functions.php)
+$lang  = function_exists('detect_lang')
+    ? detect_lang($path_only)
+    : (preg_match('~^/ua(/|$)~', $path_only) ? 'ua' : 'ru');
+$is_ua = ($lang === 'ua');
+
+$clean_path = preg_replace('~^/ua(?=/|$)~', '', $path_only);
+if ($clean_path === '' || $clean_path === null) $clean_path = '/';
+
+$link_ru = $clean_path;
+$link_ua = ($clean_path === '/') ? '/ua/' : '/ua' . $clean_path;
+
+$canonical_url = $protocol . $host . ($is_ua ? $link_ua : $link_ru);
+
+// Убираем расширение только в конце строки (раньше str_replace резал везде)
+$canonical_url = preg_replace('~/index\.(php|html)$~i', '/', $canonical_url);
+$canonical_url = preg_replace('~\.(php|html)$~i', '', $canonical_url);
+
 $home_ru = $protocol . $host . '/';
 $home_ua = $protocol . $host . '/ua/';
 if ($canonical_url !== $home_ru && $canonical_url !== $home_ua) {
     $canonical_url = rtrim($canonical_url, '/');
 }
+
+// >>> Существует ли вторая языковая версия ЭТОЙ страницы.
+// Раньше hreflang выводился всегда — и на статьях без перевода указывал
+// на 404. Google в таком случае отбрасывает всю связку, теряя обе версии.
+$alt_url = function_exists('alt_lang_url') ? alt_lang_url($db ?? null, $page, $lang) : null;
+$url_ru  = $is_ua ? $alt_url : $link_ru;
+$url_ua  = $is_ua ? $link_ua : $alt_url;
 
 // Формируем финальные Title и Description
 $final_title = !empty($title) ? $title : (!empty($page['meta_title']) ? $page['meta_title'] : 'Эвакуатор Харьков');
@@ -32,6 +65,16 @@ $final_desc  = !empty($description) ? $description : (!empty($page['meta_descrip
 
 $html_lang = $is_ua ? 'uk'    : 'ru';
 $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
+
+// Класс на <body>: на главной хлебных крошек нет, на остальных страницах есть.
+// Полоса крошек добавляет ~40px над hero — без этого класса CSS не может
+// посчитать высоту первого экрана и CTA уезжает за нижнюю границу.
+$_slug_for_body = $GLOBALS['slug'] ?? '';
+$body_class = ($_slug_for_body === 'home' || $_slug_for_body === '') ? 'is-home' : 'has-crumbs';
+// page-<type> — чтобы CSS мог сузить колонку у статей, не трогая остальные шаблоны
+$_type_for_body = preg_replace('~[^a-z0-9_-]~i', '', (string)($page['type'] ?? ''));
+if ($_type_for_body !== '') $body_class .= ' page-' . $_type_for_body;
+if ($is_404) $body_class = 'is-404';
 ?>
 <!DOCTYPE html>
 <html lang="<?= $html_lang ?>">
@@ -43,28 +86,40 @@ $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
     <title><?= htmlspecialchars($final_title) ?></title>
     <meta name="description" content="<?= htmlspecialchars($final_desc) ?>">
 
+    <?php if ($is_404): ?>
+    <meta name="robots" content="noindex">
+    <?php endif; ?>
+
     <meta property="og:title"        content="<?= htmlspecialchars($final_title) ?>">
     <meta property="og:description"  content="<?= htmlspecialchars($final_desc) ?>">
     <meta property="og:type"         content="<?= (($page['type'] ?? '') === 'articles') ? 'article' : 'website' ?>">
     <?php if (($page['type'] ?? '') === 'articles' && !empty($page['date'])): ?>
     <meta property="article:published_time" content="<?= $page['date'] ?>">
     <?php endif; ?>
+    <?php if (!$is_404): ?>
     <meta property="og:url"          content="<?= htmlspecialchars($canonical_url, ENT_QUOTES, 'UTF-8') ?>">
+    <?php endif; ?>
     <meta property="og:image"        content="https://evakuator-kharkov.kh.ua/assets/images/2-1000x500.webp">
     <meta property="og:image:width"  content="1000">
     <meta property="og:image:height" content="500">
     <meta property="og:locale"       content="<?= $og_locale ?>">
 
+    <?php if (!$is_404): ?>
     <link rel="canonical" href="<?= htmlspecialchars($canonical_url, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="alternate" hreflang="ru-UA"     href="<?= htmlspecialchars($protocol . $host . $link_ru, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="alternate" hreflang="uk-UA"     href="<?= htmlspecialchars($protocol . $host . $link_ua, ENT_QUOTES, 'UTF-8') ?>">
-    <link rel="alternate" hreflang="x-default" href="<?= htmlspecialchars($protocol . $host . $link_ru, ENT_QUOTES, 'UTF-8') ?>">
+    <?php if ($alt_url): ?>
+    <link rel="alternate" hreflang="ru-UA"     href="<?= htmlspecialchars($protocol . $host . $url_ru, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="alternate" hreflang="uk-UA"     href="<?= htmlspecialchars($protocol . $host . $url_ua, ENT_QUOTES, 'UTF-8') ?>">
+    <link rel="alternate" hreflang="x-default" href="<?= htmlspecialchars($protocol . $host . $url_ru, ENT_QUOTES, 'UTF-8') ?>">
+    <?php endif; ?>
+    <?php endif; ?>
 
     <!-- =====================================================
          PRELOAD — герой фон параллельно с HTML
          ===================================================== -->
+    <?php if (!$is_404): ?>
     <link rel="preload" as="image" href="/assets/images/header-mob.webp" media="(max-width: 767px)" fetchpriority="high">
     <link rel="preload" as="image" href="/assets/images/header-1800x1200.webp" media="(min-width: 768px)" fetchpriority="high">
+    <?php endif; ?>
 
     <!-- =====================================================
          FONTS — preconnect + async load
@@ -117,9 +172,26 @@ $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
         @media(min-width:768px){.mob-topbar{display:none}}
 
         /* ── FAB CALL ── */
-        .fab-call{position:fixed;bottom:24px;right:24px;width:64px;height:64px;background:#e9ff00;color:#111;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:150;opacity:0;pointer-events:none;transform:translateY(30px) scale(.9);transition:all .3s cubic-bezier(.25,.8,.25,1)}
-        .fab-call svg{width:28px;height:28px}
+        /* Инверсия: тёмный круг + жёлтая иконка.
+           Раньше был жёлтый круг на белом фоне — контраст ~1.2:1,
+           кнопка читалась как подсветка текста, а не как элемент. */
+        .fab-call{position:fixed;bottom:20px;right:20px;width:62px;height:62px;background:#111;color:#e9ff00;border:2px solid #e9ff00;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 28px rgba(0,0,0,.3);z-index:150;opacity:0;pointer-events:none;transform:translateY(30px) scale(.9);transition:opacity .3s,transform .3s cubic-bezier(.25,.8,.25,1)}
+        .fab-call svg{width:26px;height:26px;position:relative;z-index:1}
         .fab-call.is-visible{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+        .fab-call:active{transform:scale(.94)}
+        /* Три волны при появлении, потом покой. Бесконечная пульсация
+           на мобиле быстро начинает читаться как баннер и игнорируется. */
+        .fab-call::before{content:'';position:absolute;inset:-2px;border-radius:50%;border:2px solid #e9ff00;opacity:0;pointer-events:none}
+        .fab-call.is-visible::before{animation:fabPulse 2s ease-out 3}
+        @keyframes fabPulse{
+            0%{transform:scale(1);opacity:.75}
+            70%{transform:scale(1.65);opacity:0}
+            100%{transform:scale(1.65);opacity:0}
+        }
+        @media(prefers-reduced-motion:reduce){
+            .fab-call.is-visible::before{animation:none}
+            .fab-call{transition:opacity .2s}
+        }
         @media(min-width:992px){.fab-call{display:none!important}}
         .mob-bottom{display:none!important}
 
@@ -144,14 +216,20 @@ $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
         .mob-sheet-cta{margin:8px 16px 20px;display:flex;align-items:center;justify-content:center;gap:10px;background:#e9ff00;color:#000;font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;border-radius:12px;padding:18px;letter-spacing:.3px}
         .mob-sheet-cta svg{width:18px;height:18px}
 
-        /* safe area */
-        body{padding-bottom:70px}
+        /* safe area. Было 70px под .mob-bottom, но она display:none!important —
+           это была пустота в конце каждой страницы. 24px нужны, чтобы FAB
+           не накрывал последнюю строку футера. */
+        body{padding-bottom:24px}
         @media(min-width:768px){body{padding-bottom:0}}
 
         /* ── HERO ── */
-        .hero{position:relative;min-height:95svh;display:flex;align-items:flex-end;overflow:hidden;background:#0a0a0a url('/assets/images/header-mob.webp') center/cover no-repeat}
+        /* .mob-topbar (54px) sticky и занимает место в потоке, поэтому 95svh
+           давали первый экран выше вьюпорта и CTA уезжала за край. */
+        .hero{position:relative;min-height:calc(100svh - 54px);display:flex;align-items:flex-end;overflow:hidden;background:#0a0a0a url('/assets/images/header-mob.webp') center/cover no-repeat}
+        /* Внутренние страницы: над hero ещё полоса хлебных крошек (~40px) */
+        body.has-crumbs .hero{min-height:calc(100svh - 94px)}
         .hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.45) 55%,rgba(0,0,0,.15) 100%)}
-        .hero-body{position:relative;z-index:1;padding:40px 24px 48px;width:100%;max-width:680px}
+        .hero-body{position:relative;z-index:1;padding:32px 24px 28px;width:100%;max-width:680px}
         .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(233,255,0,.12);border:1px solid rgba(233,255,0,.35);border-radius:24px;padding:5px 14px;font-size:12px;color:#e9ff00;font-weight:600;letter-spacing:.8px;text-transform:uppercase;margin-bottom:18px}
         .hero-badge-dot{width:7px;height:7px;background:#e9ff00;border-radius:50%;flex-shrink:0}
         .hero h1{font-family:'Oswald',sans-serif;font-size:clamp(48px,12vw,84px);font-weight:700;line-height:.95;color:#fff;margin-bottom:12px;letter-spacing:-1px}
@@ -166,7 +244,8 @@ $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
         .hero-cta svg{width:20px;height:20px;flex-shrink:0}
         @media(min-width:600px){.hero-cta{width:auto}}
         @media(min-width:768px){
-        .hero{align-items:center;background-image:url('/assets/images/header-1800x1200.webp');background-size:cover;background-position:center}
+        .hero{align-items:center;min-height:calc(100svh - 64px);background-image:url('/assets/images/header-1800x1200.webp');background-size:cover;background-position:center}
+        body.has-crumbs .hero{min-height:calc(100svh - 104px)}
         .hero-body{padding:60px 48px}
         }
 
@@ -193,13 +272,22 @@ $og_locale = $is_ua ? 'uk_UA' : 'ru_UA';
     <noscript><link rel="stylesheet" href="/assets/css/theme.css"></noscript>
 
     <?php
-    // Schema.org
-    if (file_exists($_SERVER['DOCUMENT_ROOT'] . '/components/schema.php')) {
+    // Schema.org — на 404 микроразметка не нужна
+    if (!$is_404 && file_exists($_SERVER['DOCUMENT_ROOT'] . '/components/schema.php')) {
         include_once $_SERVER['DOCUMENT_ROOT'] . '/components/schema.php';
     }
     ?>
+    <!-- Google Tag Manager -->
+    <script>
+    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-W8H32TN');
+    </script>
+    <!-- End Google Tag Manager -->
 </head>
-<body>
+<body class="<?= $body_class ?>">
 
     <?php
     // Меню

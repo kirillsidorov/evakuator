@@ -1,6 +1,12 @@
 RewriteEngine On
 RewriteBase /
 
+# --- ЗАКРЫВАЕМ СЛУЖЕБНЫЕ КАТАЛОГИ ОТ ПРЯМОГО ДОСТУПА ---
+# Внутренние include() через файловую систему это не затрагивает.
+# Без правила /components/404.php и /templates/location_template.php
+# открывались по HTTP с кодом 200 и могли попасть в индекс.
+RewriteRule ^(components|templates)/ - [F,L]
+
 # --- РОКИРОВКА (должна быть ПЕРВОЙ) ---
 # Манипулятор: ВСЕ старые адреса -> /evakuator-manipulator-kharkov (реальная БД-страница)
 RewriteRule ^ua/uslugi-manipulyatora-kharkov/?$ /ua/evakuator-manipulator-kharkov [R=301,L]
@@ -28,7 +34,7 @@ RewriteRule ^evakuator-services/?$ / [R=301,L]
 
 # --- БЛОК 1: Убираем index и index.php ---
 RewriteCond %{THE_REQUEST} /index(\.php)? [NC]
-RewriteRule ^(.*)index(\\.php)?$ /$1 [R=301,L]
+RewriteRule ^(.*)index(\.php)?$ /$1 [R=301,L]
 
 
 # --- БЛОК 3: SEO И БЕЗОПАСНОСТЬ ---
@@ -85,6 +91,14 @@ RewriteRule ^ua/([^/]+)$ router.php?slug=$1&lang=ua [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^([^/]+)$ router.php?slug=$1&lang=ru [L,QSA]
+
+# ВСЁ ОСТАЛЬНОЕ (вложенные пути, битые ссылки, отсутствующие ассеты)
+# тоже уходит в роутер — он отдаст 404 с нормальной страницей.
+# Без этого правила Apache показывал свою дефолтную страницу,
+# и components/404.php никто не видел.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ router.php [L,QSA]
 
 
 # --- БЛОК 5: ЗАЩИТА И ПРИВАТНОСТЬ ---

@@ -2,7 +2,12 @@
 /**
  * ШАБЛОН: Локации + Услуги (unified)
  * Работает для type: locations, district, services
- * Новый дизайн — все компоненты из /components/
+ *
+ * Обновлено (SEO-фикс):
+ *   - guard от повторного подключения одного и того же партиала.
+ *     route_seo_block.php подключался дважды: хардкодом на шаге 4
+ *     и ещё раз из content_blocks (block_type = include).
+ *     Отсюда были дубль текста маршрута и второй FAQPage в ld+json.
  */
 
 global $settings;
@@ -40,6 +45,9 @@ if (!empty($page)) {
 
 // === СБОРКА СТРАНИЦЫ ===
 
+// Реестр уже отрисованных партиалов — защита от дублей
+$rendered_includes = [];
+
 // 1. Header
 require_smart('header.php');
 
@@ -54,22 +62,32 @@ if ($slug !== 'home' && $slug !== '') {
 // Для локаций/районов/маршрутов оставляем прежний h1_block.php.
 $hero_partial = ($page_type == 'services') ? 'h1_service.php' : 'h1_block.php';
 require_smart($hero_partial);
+$rendered_includes[$hero_partial] = true;
 
 // 4. SEO-блок маршрута (для межгорода — показывает расстояние, время, цену)
 if (!empty($dist_val) && !empty($time_val)) {
     require_smart('route_seo_block.php');
+    $rendered_includes['route_seo_block.php'] = true;
 }
 
 // 5. Контентные блоки из БД
 if (!empty($blocks)) {
     foreach ($blocks as $block) {
         if ($block['block_type'] == 'include') {
-            if ($block['block_path'] == 'maps.php' && !empty($attrs['maps'])) {
+
+            $path = $block['block_path'] ?? '';
+            if ($path === '' || !empty($rendered_includes[$path])) {
+                // уже отрисован выше — второй раз не выводим
+                continue;
+            }
+            $rendered_includes[$path] = true;
+
+            if ($path == 'maps.php' && !empty($attrs['maps'])) {
                 $loc_map = $attrs['maps'];
             }
-            require_smart($block['block_path']);
+            require_smart($path);
         }
-        elseif ($block['block_type'] == 'structured_content' 
+        elseif ($block['block_type'] == 'structured_content'
             || ($block['block_type'] == 'text' && strpos(trim($block['content']), '[') === 0 && json_decode(trim($block['content'])))) {
             // JSON контент — парсим и рендерим (защита от неправильного block_type)
             $items = json_decode(trim($block['content']), true);

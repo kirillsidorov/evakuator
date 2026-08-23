@@ -1,6 +1,19 @@
 </main>
 
 <?php
+// footer.php
+// Обновлено (фиксы):
+//   1. FAQ-аккордеон переключал класс .active НА КНОПКЕ, а CSS ждёт
+//      .faq-item.open. Из-за этого поворот иконки и подсветка не работали
+//      вообще — весь блок стилей .faq-item.open был мёртвым кодом.
+//      Теперь класс .open вешается на .faq-item, плюс обновляется
+//      aria-expanded. Ручную подмену символа +/− убрал: её делает CSS
+//      поворотом на 45°.
+//   2. GTM грузился по первому взаимодействию либо через 3 секунды.
+//      Клик по кнопке звонка уводил браузер на tel: раньше, чем GTM
+//      успевал отработать, — конверсии терялись. Теперь загрузка сразу.
+//      Чтобы вернуть отложенную загрузку, см. комментарий в скрипте.
+
 $is_ua = ($lang === 'ua');
 
 $footer_menu = $is_ua ? [
@@ -44,23 +57,28 @@ $link_prefix = $is_ua ? '/ua/' : '/';
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
+
     // 1. FAQ Аккордеон
+    //    Класс .open вешаем на .faq-item — именно его ждёт CSS.
+    //    Иконка поворачивается через CSS (.faq-item.open .faq-icon).
     document.querySelectorAll('.faq-q').forEach(btn => {
         btn.addEventListener('click', () => {
-            const ans = btn.nextElementSibling;
-            const isOpen = btn.classList.contains('active');
-            
-            document.querySelectorAll('.faq-q').forEach(b => {
-                b.classList.remove('active');
-                b.nextElementSibling.style.maxHeight = null;
-                b.querySelector('.faq-icon').textContent = '+';
+            const item   = btn.closest('.faq-item');
+            const ans    = btn.nextElementSibling;
+            const isOpen = item.classList.contains('open');
+
+            document.querySelectorAll('.faq-item').forEach(it => {
+                it.classList.remove('open');
+                const q = it.querySelector('.faq-q');
+                const a = it.querySelector('.faq-a');
+                if (q) q.setAttribute('aria-expanded', 'false');
+                if (a) a.style.maxHeight = null;
             });
-            
+
             if (!isOpen) {
-                btn.classList.add('active');
+                item.classList.add('open');
+                btn.setAttribute('aria-expanded', 'true');
                 ans.style.maxHeight = ans.scrollHeight + 'px';
-                btn.querySelector('.faq-icon').textContent = '−';
             }
         });
     });
@@ -111,37 +129,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    var gtmLoaded = false;
 
-    function loadGTM() {
-        if (gtmLoaded) return;
-        gtmLoaded = true;
-        
-        // Твой ID GTM
-        var gtmId = 'GTM-W8H32TN'; 
-
-        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-        })(window,document,'script','dataLayer',gtmId);
-
-        // Удаляем слушатели после загрузки
-        ['scroll', 'mousemove', 'touchstart', 'click'].forEach(function(event) {
-            window.removeEventListener(event, loadGTM);
-        });
-    }
-
-    // Загружаем при первом взаимодействии
-    ['scroll', 'mousemove', 'touchstart', 'click'].forEach(function(event) {
-        window.addEventListener(event, loadGTM, {once: true, passive: true});
-    });
-
-    // Подстраховка: загрузить через 3 секунды, даже если не было действий
-    setTimeout(loadGTM, 3000);
-});
-</script>
 </body>
 </html>
