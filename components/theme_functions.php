@@ -204,6 +204,31 @@ if (!function_exists('render_structured_content')) {
                 echo '<div class="text-block" style="background:#fff;border-radius:12px;padding:24px;border-left:4px solid #e9ff00">' . $hl_text . '</div>';
                 echo '</div></section>';
             }
+            elseif ($type == 'notice') {
+                $n_title = '';
+                $n_text  = '';
+
+                if (is_array($content)) {
+                    $n_title = trim((string)($content['title'] ?? ''));
+                    $n_text  = trim((string)($content['text']  ?? ''));
+                } else {
+                    $n_text  = trim((string)$content);
+                }
+
+                if ($n_text !== '') {
+                    $n_title = apply_placeholders($n_title, $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+                    $n_text  = apply_placeholders($n_text,  $name, $in_city, $price_val, $dist_val, $time_val, $settings);
+
+                    echo '<section class="sec"><div class="sec-inner">';
+                    echo '<aside class="notice notice--warn" role="note">';
+                    if ($n_title !== '') {
+                        echo '<p class="notice__title">' . htmlspecialchars($n_title) . '</p>';
+                    }
+                    echo '<p class="notice__text">' . $n_text . '</p>';
+                    echo '</aside>';
+                    echo '</div></section>';
+                }
+            }
             elseif ($type == 'cta') {
                 $default_text = ($lang == 'ua')
                     ? 'Прорахуйте вартість замовлення прямо зараз!'
