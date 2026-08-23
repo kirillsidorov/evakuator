@@ -65,7 +65,11 @@ require_smart($hero_partial);
 $rendered_includes[$hero_partial] = true;
 
 // 4. SEO-блок маршрута (для межгорода — показывает расстояние, время, цену)
-if (!empty($dist_val) && !empty($time_val)) {
+//    Не показываем на страницах с выездом по согласованию: там нет
+//    гарантированного времени подачи, и блок противоречил бы плашке.
+$on_request = !empty($attrs['on_request']);
+
+if (!$on_request && !empty($dist_val) && !empty($time_val)) {
     require_smart('route_seo_block.php');
     $rendered_includes['route_seo_block.php'] = true;
 }

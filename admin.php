@@ -234,6 +234,7 @@ if (isset($_POST['save'])) {
             <span class="navbar-brand"><i class="fas fa-cogs me-2"></i>Настройки сайта</span>
             <div class="d-flex gap-2">
                 <a href="pages_manager" class="btn btn-outline-info btn-sm"><i class="fas fa-file-alt me-1"></i>Страницы</a>
+                <a href="content_diff" class="btn btn-outline-secondary btn-sm"><i class="fas fa-clone me-1"></i>Дубли</a>
                 <a href="/" target="_blank" class="btn btn-outline-light btn-sm"><i class="fas fa-eye me-1"></i>Сайт</a>
                 <!-- Добавлена кнопка обновления Sitemap -->
                 <a href="sitemap_gen.php" target="_blank" class="btn btn-outline-warning btn-sm"><i class="fas fa-sitemap me-1"></i>Обновить Sitemap</a>

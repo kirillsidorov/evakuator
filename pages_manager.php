@@ -71,6 +71,7 @@ $ru_pages = $db->select("pages", "*", [
             <span class="navbar-brand"><i class="fas fa-file-alt me-2"></i>Страницы</span>
             <div class="d-flex gap-2">
                 <a href="admin" class="btn btn-outline-light btn-sm"><i class="fas fa-cogs me-1"></i>Настройки</a>
+                <a href="content_diff" class="btn btn-outline-secondary btn-sm"><i class="fas fa-clone me-1"></i>Дубли</a>
                 <a href="/" target="_blank" class="btn btn-outline-light btn-sm"><i class="fas fa-eye me-1"></i>Сайт</a>
                 <a href="?logout" class="btn btn-danger btn-sm">Выйти</a>
             </div>
